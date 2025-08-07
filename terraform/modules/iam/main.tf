@@ -12,10 +12,10 @@ resource "aws_iam_policy" "data_engineers_policy" {
       {
         Effect = "Allow",
         Action = ["s3:*"],
-        Resource = [
+        Resource = concat(
           [for bucket in var.s3_bucket_names : "arn:aws:s3:::${bucket}"],
           [for bucket in var.s3_bucket_names : "arn:aws:s3:::${bucket}/*"]
-        ]
+        )
       },
       {
         Effect = "Allow",

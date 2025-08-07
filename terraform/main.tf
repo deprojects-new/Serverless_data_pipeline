@@ -11,6 +11,7 @@ provider "aws" {
   }
 }
 
+/*
 module "s3" {
   source = "./modules/s3"
 
@@ -18,11 +19,21 @@ module "s3" {
   environment             = var.environment
   project                 = var.project
 }
+*/
 
-
+terraform {
+  backend "s3" {
+    bucket         = "my-terraform-state-bucket"
+    key            = "project-name/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "terraform-locks"  # optional for locking
+    encrypt        = true
+  }
+}
 
 module "iam" {
   source          = "./modules/iam"
   users           = var.users
   s3_bucket_names = [var.s3_raw_bucket]
 }
+
