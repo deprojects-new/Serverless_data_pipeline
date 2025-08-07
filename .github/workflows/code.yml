@@ -94,7 +94,6 @@ jobs:
           echo "Ready for manual deployment when you're ready"
           echo "To deploy: Uncomment deploy-lambda job in code.yml and push"
 
-  deploy-lambda job commented out - manual deployment only
   deploy-lambda:
     needs: package-lambda
     runs-on: ubuntu-latest
@@ -125,6 +124,12 @@ jobs:
             --zip-file fileb://lambda_function.zip \
             --region ${{ secrets.AWS_REGION }}
           echo "Lambda function updated successfully"
+
+      - name: Upload ETL Scripts to S3
+        run: |
+          echo "Uploading ETL scripts to S3"
+          aws s3 cp src/glue_scripts/etl_script.py s3://assignment5-raw-bucket/glue_scripts/etl_script.py
+          echo "ETL scripts uploaded successfully"
       
       - name: Run Post-Deployment Tests
         run: |
