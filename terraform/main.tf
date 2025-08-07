@@ -21,15 +21,7 @@ module "s3" {
 }
 */
 
-terraform {
-  backend "s3" {
-    bucket         = "my-terraform-state-bucket"
-    key            = "project-name/terraform.tfstate"
-    region         = "us-east-1"
-    dynamodb_table = "terraform-locks"  # optional for locking
-    encrypt        = true
-  }
-}
+
 
 module "iam" {
   source          = "./modules/iam"
