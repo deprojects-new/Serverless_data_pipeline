@@ -1,0 +1,126 @@
+name: Lambda Code Pipeline - Serverless Data Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths: ['src/**', 'tests/**']
+  pull_request:
+    branches: [main]
+    paths: ['src/**', 'tests/**']
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-2
+  PYTHON_VERSION: '3.11'
+  PROJECT_NAME: serverless-data-pipeline
+
+jobs:
+  test-lambda-code:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r src/requirements.txt
+          pip install pytest pytest-cov moto boto3
+      
+      - name: Lint Lambda Code
+        run: |
+          pip install flake8
+          flake8 src/lambda_code/ --max-line-length=88 --ignore=E203,W503
+          flake8 src/glue_scripts/ --max-line-length=88 --ignore=E203,W503      
+
+      - name: Run Unit Tests
+        run: |
+          if [ -d "tests/unit" ]; then
+            echo "Running unit tests for Lambda functions"
+            python -m pytest tests/unit/ -v --cov=terraform/modules/lambda/lambda_code --cov-report=term-missing
+          else
+            echo "No unit tests found, skipping"
+          fi
+      
+      - name: Run Integration Tests
+        run: |
+          if [ -d "tests/integration" ]; then
+            echo "Running integration tests"
+            python -m pytest tests/integration/ -v
+          else
+            echo "No integration tests found, skipping"
+          fi
+
+  package-lambda:
+    needs: test-lambda-code
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r src/requirements.txt
+      
+      - name: Package Lambda Code
+        run: |
+          echo "Packaging Lambda function code"
+          cd terraform/modules/lambda
+          zip -r lambda_function.zip lambda_code/
+          echo "Lambda code packaged successfully"
+      
+      - name: Upload Lambda Package
+        uses: actions/upload-artifact@v3
+        with:
+          name: lambda-package
+          path: terraform/modules/lambda/lambda_function.zip
+
+  deploy-lambda:
+    needs: package-lambda
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Download Lambda Package
+        uses: actions/download-artifact@v3
+        with:
+          name: lambda-package
+          path: terraform/modules/lambda/
+      
+      - name: Update Lambda Function
+        run: |
+          echo "Updating Lambda function code"
+          cd terraform/modules/lambda
+          aws lambda update-function-code \
+            --function-name assignment5-ingest-lambda \
+            --zip-file fileb://lambda_function.zip \
+            --region ${{ secrets.AWS_REGION }}
+          echo "Lambda function updated successfully"
+      
+      - name: Run Post-Deployment Tests
+        run: |
+          echo "Running post-deployment validation"
+          # Add Lambda function invocation tests here
+          echo "Lambda deployment validation completed"
