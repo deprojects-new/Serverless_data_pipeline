@@ -1,0 +1,106 @@
+name: Terraform Infrastructure - Serverless Data Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths: ['terraform/**']
+  pull_request:
+    branches: [main]
+    paths: ['terraform/**']
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-2
+  TERRAFORM_VERSION: '1.5.0'
+  PROJECT_NAME: serverless-data-pipeline
+
+jobs:
+  terraform-validate:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        working-directory: ./terraform
+      
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ./terraform
+      
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: ./terraform
+      
+      - name: Terraform Plan
+        run: |
+          terraform plan -var-file="environments/prod.tfvars" -out=tfplan
+          terraform show -no-color tfplan > plan_output.txt
+        working-directory: ./terraform
+      
+      - name: Comment PR with Plan
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('./terraform/plan_output.txt', 'utf8');
+            const maxLength = 65000;
+            const truncatedPlan = plan.length > maxLength ? plan.substring(0, maxLength) + '\n\n... (truncated)' : plan;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Terraform Plan\n\`\`\`\n${truncatedPlan}\n\`\`\``
+            });
+
+  terraform-deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ./terraform
+      
+      - name: Deploy Log Processing Infrastructure
+        run: |
+          echo "Deploying Serverless Log Processing Pipeline Infrastructure"
+          terraform apply -auto-approve -var-file="environments/prod.tfvars"
+          echo "Infrastructure deployment completed"
+        working-directory: ./terraform
+      
+      - name: Output Infrastructure Details
+        run: |
+          echo "Infrastructure Outputs:"
+          terraform output
+        working-directory: ./terraform
