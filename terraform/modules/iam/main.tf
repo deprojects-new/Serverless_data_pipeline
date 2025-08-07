@@ -61,24 +61,25 @@ resource "aws_iam_group_policy_attachment" "attach_custom_policy" {
   policy_arn = aws_iam_policy.data_engineers_policy.arn
 }
 
-resource "aws_iam_user" "users" {
-  for_each = toset(var.users)
-  name     = each.value
-  tags = {
-    Department  = "Engineering"
-    AccessLevel = "DataEngineer"
-  }
-}
+# Temporarily commented out - will add users later
+# resource "aws_iam_user" "users" {
+#   for_each = toset(var.users)
+#   name     = each.value
+#   tags = {
+#     Department  = "Engineering"
+#     AccessLevel = "DataEngineer"
+#   }
+# }
 
-resource "aws_iam_user_login_profile" "logins" {
-  for_each                = aws_iam_user.users
-  user                    = each.value.name
-  password_length         = 16
-  password_reset_required = true
-}
+# resource "aws_iam_user_login_profile" "logins" {
+#   for_each                = toset(var.users)
+#   user                    = each.value
+#   password_length         = 16
+#   password_reset_required = true
+# }
 
-resource "aws_iam_user_group_membership" "group_membership" {
-  for_each = aws_iam_user.users
-  user     = each.value.name
-  groups   = [aws_iam_group.data_engineers.name]
-}
+# resource "aws_iam_user_group_membership" "group_membership" {
+#   for_each = toset(var.users)
+#   user     = each.value
+#   groups   = [aws_iam_group.data_engineers.name]
+# }

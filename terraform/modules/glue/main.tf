@@ -47,7 +47,7 @@ resource "aws_glue_job" "etl_job" {
   role_arn = var.glue_role_arn
 
   command {
-    script_location = "s3://${var.s3_glue_script_bucket}/etl_script.py"
+    script_location = "s3://${var.s3_raw_bucket}/glue_scripts/etl_script.py"
     python_version  = "3"
   }
 
@@ -85,6 +85,8 @@ resource "aws_cloudwatch_log_group" "glue_log_group" {
     Project     = var.project
   }
 }
+
+
 
 # Glue Security Configuration
 resource "aws_glue_security_configuration" "glue_security_config" {

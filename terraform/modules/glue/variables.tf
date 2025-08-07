@@ -23,10 +23,7 @@ variable "s3_processed_bucket" {
   type        = string
 }
 
-variable "s3_glue_script_bucket" {
-  description = "Name of the S3 bucket for Glue scripts"
-  type        = string
-}
+
 
 variable "glue_role_arn" {
   description = "ARN of the Glue execution role"
