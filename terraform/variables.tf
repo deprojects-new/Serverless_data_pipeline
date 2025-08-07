@@ -86,3 +86,9 @@ variable "project" {
   type        = string
   default     = "serverless-data-pipeline"
 }
+
+variable "users" {
+  description = "List of IAM users to create"
+  type        = list(string)
+  default     = ["your-user1", "your-user2", "your-user3"]
+}
