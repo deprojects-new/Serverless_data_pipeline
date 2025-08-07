@@ -27,7 +27,7 @@ resource "aws_lambda_function" "data_processor" {
 data "archive_file" "lambda_zip" {
   type        = "zip"
   output_path = "${path.module}/lambda_function.zip"
-  source_dir  = "${path.module}/lambda_code"
+  source_dir  = "${path.root}/src/lambda_code"
 }
 
 # CloudWatch Log Group for Lambda

@@ -77,7 +77,7 @@ jobs:
       - name: Package Lambda Code
         run: |
           echo "Packaging Lambda function code"
-          cd terraform/modules/lambda
+          cd src
           zip -r lambda_function.zip lambda_code/
           echo "Lambda code packaged successfully"
       
@@ -85,7 +85,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: lambda-package
-          path: terraform/modules/lambda/lambda_function.zip
+          path: src/lambda_function.zip
 
   deploy-lambda:
     needs: package-lambda
@@ -99,20 +99,19 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_KEY2 }}
           aws-region: ${{ secrets.AWS_REGION }}
       
       - name: Download Lambda Package
         uses: actions/download-artifact@v3
         with:
           name: lambda-package
-          path: terraform/modules/lambda/
+          path: ./
       
       - name: Update Lambda Function
         run: |
           echo "Updating Lambda function code"
-          cd terraform/modules/lambda
           aws lambda update-function-code \
             --function-name assignment5-ingest-lambda \
             --zip-file fileb://lambda_function.zip \

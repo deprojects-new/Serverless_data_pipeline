@@ -12,10 +12,10 @@ resource "aws_iam_policy" "data_engineers_policy" {
       {
         Effect = "Allow",
         Action = ["s3:*"],
-        Resource = [
+        Resource = concat(
           [for bucket in var.s3_bucket_names : "arn:aws:s3:::${bucket}"],
           [for bucket in var.s3_bucket_names : "arn:aws:s3:::${bucket}/*"]
-        ]
+        )
       },
       {
         Effect = "Allow",
@@ -71,14 +71,16 @@ resource "aws_iam_user" "users" {
 }
 
 resource "aws_iam_user_login_profile" "logins" {
-  for_each                = aws_iam_user.users
-  user                    = each.value.name
+  for_each                = toset(var.users)
+  user                    = each.value
   password_length         = 16
   password_reset_required = true
 }
 
 resource "aws_iam_user_group_membership" "group_membership" {
-  for_each = aws_iam_user.users
-  user     = each.value.name
+  for_each = toset(var.users)
+  user     = each.value
   groups   = [aws_iam_group.data_engineers.name]
 }
+
+
