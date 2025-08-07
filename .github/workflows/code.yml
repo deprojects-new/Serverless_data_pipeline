@@ -3,10 +3,10 @@ name: Lambda Code Pipeline - Serverless Data Pipeline
 on:
   push:
     branches: [main]
-    paths: ['terraform/modules/lambda/**', 'src/**', 'tests/**']
+    paths: ['src/**', 'tests/**']
   pull_request:
     branches: [main]
-    paths: ['terraform/modules/lambda/**', 'src/**', 'tests/**']
+    paths: ['src/**', 'tests/**']
   workflow_dispatch:
 
 env:
@@ -35,9 +35,9 @@ jobs:
       - name: Lint Lambda Code
         run: |
           pip install flake8
-          flake8 terraform/modules/lambda/lambda_code/ --max-line-length=88 --ignore=E203,W503
-          flake8 terraform/modules/glue/glue_scripts/ --max-line-length=88 --ignore=E203,W503
-      
+          flake8 src/lambda_code/ --max-line-length=88 --ignore=E203,W503
+          flake8 src/glue_scripts/ --max-line-length=88 --ignore=E203,W503      
+
       - name: Run Unit Tests
         run: |
           if [ -d "tests/unit" ]; then
