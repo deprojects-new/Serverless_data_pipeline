@@ -52,12 +52,12 @@ resource "aws_glue_job" "etl_job" {
   }
 
   default_arguments = {
-    "--job-language" = "python"
-    "--job-bookmark-option" = "job-bookmark-enable"
+    "--job-language"                     = "python"
+    "--job-bookmark-option"              = "job-bookmark-enable"
     "--enable-continuous-cloudwatch-log" = "true"
-    "--enable-metrics" = "true"
-    "--raw_bucket" = var.s3_raw_bucket
-    "--processed_bucket" = var.s3_processed_bucket
+    "--enable-metrics"                   = "true"
+    "--raw_bucket"                       = var.s3_raw_bucket
+    "--processed_bucket"                 = var.s3_processed_bucket
   }
 
   execution_property {

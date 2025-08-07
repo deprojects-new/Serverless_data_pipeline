@@ -34,7 +34,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_KEY2 }}
           aws-region: ${{ secrets.AWS_REGION }}
       
-      - name: Terraform Format Check
+      - name: Terraform Format
         run: terraform fmt -check -recursive
         working-directory: ./terraform
       
