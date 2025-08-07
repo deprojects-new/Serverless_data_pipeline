@@ -32,3 +32,11 @@ module "iam" {
   environment         = var.environment
   project             = var.project
 }
+
+module "lambda" {
+  source                    = "./modules/lambda"
+  lambda_execution_role_arn = module.iam.lambda_execution_role_arn
+  s3_raw_bucket            = var.s3_raw_bucket
+  environment              = var.environment
+  project                  = var.project
+}
