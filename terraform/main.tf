@@ -18,3 +18,11 @@ module "s3" {
   environment             = var.environment
   project                 = var.project
 }
+
+
+
+module "iam" {
+  source          = "./modules/iam"
+  users           = var.users
+  s3_bucket_names = [var.s3_raw_bucket]
+}

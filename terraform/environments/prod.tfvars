@@ -18,3 +18,5 @@ GLUE_DATABASE_NAME = assignment5-logdb
 # Tags
 ENVIRONMENT = production
 PROJECT     = serverless-data-pipeline
+
+users = ["Abhinav", "Priya", "Srinidhi"]

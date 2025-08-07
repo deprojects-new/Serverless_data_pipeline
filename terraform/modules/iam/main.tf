@@ -1,141 +1,84 @@
-# Lambda execution role
-resource "aws_iam_role" "lambda_role" {
-  name = "${var.lambda_function_name}-execution-role"
+resource "aws_iam_group" "data_engineers" {
+  name = "DataEngineers"
+}
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+resource "aws_iam_policy" "data_engineers_policy" {
+  name        = "DataEngineersLeastPrivilegePolicy"
+  description = "Grants least privilege access to required services"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
     Statement = [
       {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "lambda.amazonaws.com"
-        }
+        Effect = "Allow",
+        Action = ["s3:*"],
+        Resource = [
+          [for bucket in var.s3_bucket_names : "arn:aws:s3:::${bucket}"],
+          [for bucket in var.s3_bucket_names : "arn:aws:s3:::${bucket}/*"]
+        ]
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "glue:*",
+          "lambda:*",
+          "cloudwatch:*",
+          "logs:*",
+          "events:*",
+          "states:*"
+        ],
+        Resource = "*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "iam:GetRole",
+          "iam:PassRole",
+          "iam:ListRoles",
+          "iam:ListPolicies",
+          "iam:GetPolicy",
+          "iam:GetPolicyVersion"
+        ],
+        Resource = "*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey",
+          "kms:DescribeKey",
+          "kms:CreateGrant",
+          "kms:ListGrants"
+        ],
+        Resource = "*"
       }
     ]
   })
+}
 
+resource "aws_iam_group_policy_attachment" "attach_custom_policy" {
+  group      = aws_iam_group.data_engineers.name
+  policy_arn = aws_iam_policy.data_engineers_policy.arn
+}
+
+resource "aws_iam_user" "users" {
+  for_each = toset(var.users)
+  name     = each.value
   tags = {
-    Name        = "${var.lambda_function_name}-execution-role"
-    Environment = var.environment
-    Project     = var.project
+    Department  = "Engineering"
+    AccessLevel = "DataEngineer"
   }
 }
 
-# Lambda execution policy
-resource "aws_iam_role_policy" "lambda_execution_policy" {
-  name = "${var.lambda_function_name}-execution-policy"
-  role = aws_iam_role.lambda_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = "arn:aws:logs:*:*:*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject"
-        ]
-        Resource = [
-          "arn:aws:s3:::${var.s3_raw_bucket}/*",
-          "arn:aws:s3:::${var.s3_processed_bucket}/*"
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:ListBucket"
-        ]
-        Resource = [
-          "arn:aws:s3:::${var.s3_raw_bucket}",
-          "arn:aws:s3:::${var.s3_processed_bucket}"
-        ]
-      }
-    ]
-  })
+resource "aws_iam_user_login_profile" "logins" {
+  for_each                = aws_iam_user.users
+  user                    = each.value.name
+  password_length         = 16
+  password_reset_required = true
 }
 
-# Glue execution role
-resource "aws_iam_role" "glue_role" {
-  name = "${var.glue_job_name}-execution-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "glue.amazonaws.com"
-        }
-      }
-    ]
-  })
-
-  tags = {
-    Name        = "${var.glue_job_name}-execution-role"
-    Environment = var.environment
-    Project     = var.project
-  }
-}
-
-# Attach AWS managed policy for Glue service role
-resource "aws_iam_role_policy_attachment" "glue_service_role" {
-  role       = aws_iam_role.glue_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole"
-}
-
-# Glue execution policy
-resource "aws_iam_role_policy" "glue_execution_policy" {
-  name = "${var.glue_job_name}-execution-policy"
-  role = aws_iam_role.glue_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject"
-        ]
-        Resource = [
-          "arn:aws:s3:::${var.s3_raw_bucket}/*",
-          "arn:aws:s3:::${var.s3_processed_bucket}/*",
-          "arn:aws:s3:::${var.s3_glue_script_bucket}/*"
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:ListBucket"
-        ]
-        Resource = [
-          "arn:aws:s3:::${var.s3_raw_bucket}",
-          "arn:aws:s3:::${var.s3_processed_bucket}",
-          "arn:aws:s3:::${var.s3_glue_script_bucket}"
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = "arn:aws:logs:*:*:*"
-      }
-    ]
-  })
+resource "aws_iam_user_group_membership" "group_membership" {
+  for_each = aws_iam_user.users
+  user     = each.value.name
+  groups   = [aws_iam_group.data_engineers.name]
 }

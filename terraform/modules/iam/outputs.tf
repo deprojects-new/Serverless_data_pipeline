@@ -1,19 +1,7 @@
-output "lambda_role_arn" {
-  description = "ARN of the Lambda execution role"
-  value       = aws_iam_role.lambda_role.arn
+output "iam_user_names" {
+  value = [for user in aws_iam_user.users : user.name]
 }
 
-output "lambda_role_name" {
-  description = "Name of the Lambda execution role"
-  value       = aws_iam_role.lambda_role.name
-}
-
-output "glue_role_arn" {
-  description = "ARN of the Glue execution role"
-  value       = aws_iam_role.glue_role.arn
-}
-
-output "glue_role_name" {
-  description = "Name of the Glue execution role"
-  value       = aws_iam_role.glue_role.name
+output "data_engineers_group" {
+  value = aws_iam_group.data_engineers.name
 }
