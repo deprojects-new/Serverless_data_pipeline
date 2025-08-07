@@ -24,8 +24,11 @@ module "s3" {
 
 
 module "iam" {
-  source          = "./modules/iam"
-  users           = var.users
-  s3_bucket_names = [var.s3_raw_bucket, var.s3_processed_bucket]
+  source              = "./modules/iam"
+  users               = var.users
+  s3_bucket_names     = [var.s3_raw_bucket, var.s3_processed_bucket]
+  s3_raw_bucket       = var.s3_raw_bucket
+  s3_processed_bucket = var.s3_processed_bucket
+  environment         = var.environment
+  project             = var.project
 }
-
