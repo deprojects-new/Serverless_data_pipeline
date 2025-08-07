@@ -8,3 +8,6 @@ S3_PROCESSED_BUCKET = assignment5-processed-bucket
 # Tags
 ENVIRONMENT = production
 PROJECT     = serverless-data-pipeline
+
+# Users
+users = ["Abhinav", "Priya", "Srinidhi"]

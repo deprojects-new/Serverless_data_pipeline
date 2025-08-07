@@ -25,7 +25,7 @@ module "s3" {
 
 module "iam" {
   source          = "./modules/iam"
-  users           = []  # Empty list - no users for now
-  s3_bucket_names = [var.s3_raw_bucket]
+  users           = var.users
+  s3_bucket_names = [var.s3_raw_bucket, var.s3_processed_bucket]
 }
 

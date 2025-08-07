@@ -53,39 +53,54 @@ jobs:
         working-directory: ./terraform
       
       
-  terraform-deploy:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment: production
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-      
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_KEY }}
-          aws-secret-access-key: ${{ secrets.AWS_KEY2 }}
-          aws-region: ${{ secrets.AWS_REGION }}
-      
-      - name: Terraform Init
-        run: terraform init
-        working-directory: ./terraform
-      
-      - name: Deploy Log Processing Infrastructure
-        run: |
-          echo "Deploying Serverless Log Processing Pipeline Infrastructure"
-          terraform apply -auto-approve -var-file="environments/prod.tfvars"
-          echo "Infrastructure deployment completed"
-        working-directory: ./terraform
-      
-      - name: Output Infrastructure Details
-        run: |
-          echo "Infrastructure Outputs:"
-          terraform output
-        working-directory: ./terraform
+  # terraform-deploy:
+  #   runs-on: ubuntu-latest
+  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  #   environment: production
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
+  #     
+  #     - name: Setup Terraform
+  #       uses: hashicorp/setup-terraform@v2
+  #       with:
+  #         terraform_version: ${{ env.TERRAFORM_VERSION }}
+  #     
+  #     - name: Configure AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@v2
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_KEY }}
+  #         aws-secret-access-key: ${{ secrets.AWS_KEY2 }}
+  #         aws-region: ${{ secrets.AWS_REGION }}
+  #     
+  #     - name: Terraform Init
+  #       run: terraform init
+  #       working-directory: ./terraform
+  #     
+  #     - name: Setup Terraform Workspace
+  #       run: |
+  #         terraform workspace new cicd || terraform workspace select cicd
+  #         echo "Using workspace: $(terraform workspace show)"
+  #       working-directory: ./terraform
+  #     
+  #     - name: Import Existing Resources
+  #       run: |
+  #         echo "Importing existing resources to Terraform state"
+  #         terraform import module.iam.aws_iam_group.data_engineers DataEngineers || echo "IAM group already imported or doesn't exist"
+  #         terraform import module.iam.aws_iam_policy.data_engineers_policy arn:aws:iam::997118486926:policy/DataEngineersLeastPrivilegePolicy || echo "IAM policy already imported or doesn't exist"
+  #         terraform import module.s3.aws_s3_bucket.raw_storage_bucket assignment5-raw-bucket || echo "S3 bucket already imported or doesn't exist"
+  #         echo "Import completed"
+  #       working-directory: ./terraform
+  #     
+  #     - name: Deploy Log Processing Infrastructure
+  #       run: |
+  #         echo "Deploying Serverless Log Processing Pipeline Infrastructure"
+  #         terraform apply -auto-approve -var-file="environments/prod.tfvars"
+  #         echo "Infrastructure deployment completed"
+  #       working-directory: ./terraform
+  #     
+  #     - name: Output Infrastructure Details
+  #       run: |
+  #         echo "Infrastructure Outputs:"
+  #         terraform output
+  #       working-directory: ./terraform
