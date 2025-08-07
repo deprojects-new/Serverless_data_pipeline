@@ -1,5 +1,6 @@
 boto3
-pyspark
 pytest
+pytest-cov
+moto
+pytest-mock
 flake8
-black
