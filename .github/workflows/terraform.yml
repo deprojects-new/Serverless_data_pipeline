@@ -52,22 +52,7 @@ jobs:
           terraform show -no-color tfplan > plan_output.txt
         working-directory: ./terraform
       
-      - name: Comment PR with Plan
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const fs = require('fs');
-            const plan = fs.readFileSync('./terraform/plan_output.txt', 'utf8');
-            const maxLength = 65000;
-            const truncatedPlan = plan.length > maxLength ? plan.substring(0, maxLength) + '\n\n... (truncated)' : plan;
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `## Terraform Plan\n\`\`\`\n${truncatedPlan}\n\`\`\``
-            });
-
+      
   terraform-deploy:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
