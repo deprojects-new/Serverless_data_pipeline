@@ -7,19 +7,24 @@ variable "aws_region" {
 
 
 
-# S3 Configuration
-variable "s3_raw_bucket" {
-  description = "Name of the S3 bucket for raw data"
+#Data Lake Configuration
+variable "data_lake_bucket_name" {
+  description = "Name of the S3 data lake bucket"
   type        = string
-  default     = "assignment5-raw-bucket"
+  default     = "assignment5-data-lake"
 }
 
-variable "s3_processed_bucket" {
-  description = "Name of the S3 bucket for processed data"
-  type        = string
-  default     = "assignment5-processed-bucket"
+variable "data_lake_versioning" {
+  description = "Enable versioning for the data lake bucket"
+  type        = bool
+  default     = true
 }
 
+variable "data_lake_lifecycle_days" {
+  description = "Number of days to keep data in different tiers"
+  type        = number
+  default     = 365
+}
 
 
 

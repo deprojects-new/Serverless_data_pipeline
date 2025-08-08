@@ -15,10 +15,11 @@ provider "aws" {
 module "s3" {
   source = "./modules/s3"
 
-  raw_storage_bucket_name      = var.s3_raw_bucket
-  processed_storage_bucket_name = var.s3_processed_bucket
-  environment                  = var.environment
-  project                      = var.project
+  data_lake_bucket_name      = var.data_lake_bucket_name
+  data_lake_versioning       = var.data_lake_versioning
+  data_lake_lifecycle_days   = var.data_lake_lifecycle_days
+  environment                = var.environment
+  project                    = var.project
 }
 
 
@@ -26,9 +27,7 @@ module "s3" {
 module "iam" {
   source              = "./modules/iam"
   users               = var.users
-  s3_bucket_names     = [var.s3_raw_bucket, var.s3_processed_bucket]
-  s3_raw_bucket       = var.s3_raw_bucket
-  s3_processed_bucket = var.s3_processed_bucket
+  data_lake_bucket_name = var.data_lake_bucket_name
   environment         = var.environment
   project             = var.project
 }
@@ -36,7 +35,7 @@ module "iam" {
 module "lambda" {
   source                    = "./modules/lambda"
   lambda_execution_role_arn = module.iam.lambda_execution_role_arn
-  s3_raw_bucket            = var.s3_raw_bucket
+  data_lake_bucket_name    = var.data_lake_bucket_name
   environment              = var.environment
   project                  = var.project
 }
@@ -47,8 +46,7 @@ module "glue" {
   crawler_name        = "assignment5-crawler"
   job_name            = "assignment5-etl-job"
   glue_role_arn       = module.iam.glue_execution_role_arn
-  s3_raw_bucket       = var.s3_raw_bucket
-  s3_processed_bucket = var.s3_processed_bucket
+  data_lake_bucket_name = var.data_lake_bucket_name
   environment         = var.environment
   project             = var.project
 }

@@ -1,11 +1,18 @@
-variable "raw_storage_bucket_name" {
-  description = "Name of the S3 bucket for raw data storage"
+variable "data_lake_bucket_name" {
+  description = "Name of the S3 data lake bucket"
   type        = string
 }
 
-variable "processed_storage_bucket_name" {
-  description = "Name of the S3 bucket for processed data storage"
-  type        = string
+variable "data_lake_versioning" {
+  description = "Enable versioning for the data lake bucket"
+  type        = bool
+  default     = true
+}
+
+variable "data_lake_lifecycle_days" {
+  description = "Number of days to keep data in different tiers"
+  type        = number
+  default     = 365
 }
 
 variable "environment" {

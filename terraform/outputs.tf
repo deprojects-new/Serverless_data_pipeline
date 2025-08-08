@@ -1,21 +1,16 @@
-output "raw_storage_bucket_name" {
-  description = "Name of the raw storage S3 bucket"
-  value       = module.s3.raw_storage_bucket_name
+output "data_lake_bucket_name" {
+  description = "Name of the data lake S3 bucket"
+  value       = module.s3.data_lake_bucket_name
 }
 
-output "raw_storage_bucket_arn" {
-  description = "ARN of the raw storage S3 bucket"
-  value       = module.s3.raw_storage_bucket_arn
+output "data_lake_bucket_arn" {
+  description = "ARN of the data lake S3 bucket"
+  value       = module.s3.data_lake_bucket_arn
 }
 
-output "processed_storage_bucket_name" {
-  description = "Name of the processed storage S3 bucket"
-  value       = module.s3.processed_storage_bucket_name
-}
-
-output "processed_storage_bucket_arn" {
-  description = "ARN of the processed storage S3 bucket"
-  value       = module.s3.processed_storage_bucket_arn
+output "data_lake_bucket_id" {
+  description = "ID of the data lake S3 bucket"
+  value       = module.s3.data_lake_bucket_id
 }
 
 output "lambda_execution_role_arn" {

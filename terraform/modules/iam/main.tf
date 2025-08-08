@@ -12,10 +12,10 @@ resource "aws_iam_policy" "data_engineers_policy" {
       {
         Effect = "Allow",
         Action = ["s3:*"],
-        Resource = concat(
-          [for bucket in var.s3_bucket_names : "arn:aws:s3:::${bucket}"],
-          [for bucket in var.s3_bucket_names : "arn:aws:s3:::${bucket}/*"]
-        )
+        Resource = [
+          "arn:aws:s3:::${var.data_lake_bucket_name}",
+          "arn:aws:s3:::${var.data_lake_bucket_name}/*"
+        ]
       },
       {
         Effect = "Allow",
@@ -143,8 +143,8 @@ resource "aws_iam_role_policy" "lambda_execution_policy" {
           "s3:ListBucket"
         ]
         Resource = [
-          "arn:aws:s3:::${var.s3_raw_bucket}",
-          "arn:aws:s3:::${var.s3_raw_bucket}/*"
+          "arn:aws:s3:::${var.data_lake_bucket_name}",
+          "arn:aws:s3:::${var.data_lake_bucket_name}/*"
         ]
       }
     ]
@@ -199,10 +199,8 @@ resource "aws_iam_role_policy" "glue_execution_policy" {
           "s3:ListBucket"
         ]
         Resource = [
-          "arn:aws:s3:::${var.s3_raw_bucket}",
-          "arn:aws:s3:::${var.s3_raw_bucket}/*",
-          "arn:aws:s3:::${var.s3_processed_bucket}",
-          "arn:aws:s3:::${var.s3_processed_bucket}/*"
+          "arn:aws:s3:::${var.data_lake_bucket_name}",
+          "arn:aws:s3:::${var.data_lake_bucket_name}/*"
         ]
       },
       {
