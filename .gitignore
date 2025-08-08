@@ -28,6 +28,7 @@ wheels/
 .terraform.lock.hcl
 crash.log
 *.tfvars.backup
+*.tfvars
 
 # AWS
 .aws/

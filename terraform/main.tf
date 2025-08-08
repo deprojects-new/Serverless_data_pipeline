@@ -40,3 +40,15 @@ module "lambda" {
   environment              = var.environment
   project                  = var.project
 }
+
+module "glue" {
+  source              = "./modules/glue"
+  database_name       = "assignment5-data-database"
+  crawler_name        = "assignment5-crawler"
+  job_name            = "assignment5-etl-job"
+  glue_role_arn       = module.iam.glue_execution_role_arn
+  s3_raw_bucket       = var.s3_raw_bucket
+  s3_processed_bucket = var.s3_processed_bucket
+  environment         = var.environment
+  project             = var.project
+}

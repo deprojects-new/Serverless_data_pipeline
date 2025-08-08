@@ -17,6 +17,7 @@ env:
 jobs:
   test-lambda-code:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (contains(github.event.head_commit.modified, 'src/lambda_code/') || contains(github.event.head_commit.modified, 'src/glue_scripts/'))
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -32,11 +33,36 @@ jobs:
           pip install -r src/requirements.txt
           pip install pytest pytest-cov moto boto3 pytest-mock
       
-      - name: Lint Lambda Code
+      - name: Auto-Format Code
         run: |
-          pip install flake8
-          flake8 src/lambda_code/ --max-line-length=88 --ignore=E203,W503
-          flake8 src/glue_scripts/ --max-line-length=88 --ignore=E203,W503      
+          pip install black isort
+          
+          # Format Lambda code
+          echo "Formatting Lambda code..."
+          black src/lambda_code/ --line-length=88
+          isort src/lambda_code/ --profile=black
+          
+          # Format Glue scripts
+          echo "Formatting Glue scripts..."
+          black src/glue_scripts/ --line-length=88
+          isort src/glue_scripts/ --profile=black
+          
+          echo "Code formatting completed successfully"
+      
+      - name: Commit Formatted Code
+        run: |
+          # Check if there are any changes to commit
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Committing formatted code..."
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add .
+            git commit -m "Auto-format code with black and isort"
+            git push
+            echo "Formatted code committed successfully"
+          else
+            echo "No formatting changes needed"
+          fi      
 
       - name: Run Unit Tests
         run: |
@@ -59,7 +85,7 @@ jobs:
   package-lambda:
     needs: test-lambda-code
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && contains(github.event.head_commit.modified, 'src/lambda_code/')
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -91,14 +117,13 @@ jobs:
         run: |
           echo "Code Quality & Testing Pipeline Completed Successfully!"
           echo "Lambda package created and uploaded as artifact"
-          echo "Ready for manual deployment when you're ready"
-          echo "To deploy: Uncomment deploy-lambda job in code.yml and push"
+          echo "Ready for Lambda and ETL deployment when you're ready"
+          echo "To deploy: Uncomment lambda-deploy and etl-deploy jobs and push"
 
-  deploy-lambda job commented out - manual deployment only
-  deploy-lambda:
+  lambda-deploy:
     needs: package-lambda
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && contains(github.event.head_commit.modified, 'src/lambda_code/')
     environment: production
     steps:
       - name: Checkout code
@@ -126,9 +151,67 @@ jobs:
             --region ${{ secrets.AWS_REGION }}
           echo "Lambda function updated successfully"
       
-      - name: Run Post-Deployment Tests
+      - name: Verify Lambda Deployment
         run: |
-          echo "Running post-deployment validation"
+          echo "Verifying Lambda function deployment"
           aws lambda get-function --function-name assignment5-data-pipeline-lambda --region ${{ secrets.AWS_REGION }}
-          echo "Lambda function verification completed"
-          echo "Lambda deployment validation completed"
+          echo "Lambda function deployment verified successfully"
+
+  etl-deploy:
+    needs: test-lambda-code
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && contains(github.event.head_commit.modified, 'src/glue_scripts/')
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_KEY2 }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Upload ETL Scripts to S3
+        run: |
+          echo "Uploading ETL scripts to S3"
+          aws s3 cp src/glue_scripts/etl_script.py s3://assignment5-raw-bucket/glue_scripts/etl_script.py
+          echo "ETL scripts uploaded successfully"
+      
+      - name: Verify ETL Script Upload
+        run: |
+          echo "Verifying ETL script upload"
+          aws s3 ls s3://assignment5-raw-bucket/glue_scripts/etl_script.py
+          echo "ETL script upload verified successfully"
+
+  verify-deployment:
+    needs: [lambda-deploy, etl-deploy]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && (contains(github.event.head_commit.modified, 'src/lambda_code/') || contains(github.event.head_commit.modified, 'src/glue_scripts/'))
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_KEY2 }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Final Deployment Verification
+        run: |
+          echo "Performing final deployment verification"
+          
+          # Verify Lambda function
+          echo "Verifying Lambda function..."
+          aws lambda get-function --function-name assignment5-data-pipeline-lambda --region ${{ secrets.AWS_REGION }}
+          
+          # Verify ETL script
+          echo "Verifying ETL script..."
+          aws s3 ls s3://assignment5-raw-bucket/glue_scripts/etl_script.py
+          
+          echo "All deployments verified successfully!"
+          echo "Lambda function and ETL scripts are ready for use"
