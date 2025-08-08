@@ -39,20 +39,21 @@ jobs:
           pip install -r src/requirements.txt
           pip install black isort pytest pytest-cov boto3 moto
 
-      - name: Format Code
+      - name: Check Code Formatting
         run: |
-          black src/lambda_code/ src/glue_scripts/ --line-length=88
-          isort src/lambda_code/ src/glue_scripts/ --profile=black
+          pip install black isort
+          echo "Checking code formatting"
+          #check lambda_code
+          black src/lambda_code/ --line-length=88 --check
+          isort src/lambda_code/ --profile=black --check
+          #check glue
+          black
+          black src/glue_scripts/ --line-length=88 --check
+          isort src/glue_scripts/ --profile=black --check
+          #check test
+          black src/tests/ --line-length=88 --check
+          isort src/tests/ --profile=black --check
 
-      - name: Commit Any Auto-Formatting
-        run: |
-          if [ -n "$(git status --porcelain)" ]; then
-            git config --local user.name "GitHub Action"
-            git config --local user.email "action@github.com"
-            git add .
-            git commit -m "Auto-format with Black & isort"
-            git push
-          fi
 
       - name: Run Unit Tests
         run: |
