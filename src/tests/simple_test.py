@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
-"""
-Simple test script to validate Lambda function structure
-"""
+
+#this is sample test to check lambda fn code
 
 import json
 import sys
 import os
 
-# Add lambda_code to path (relative to tests directory)
 sys.path.append('../lambda_code')
 
 def test_import():
-    """Test that we can import the Lambda function"""
+    """Testing so check if we can import the Lambda function"""
     try:
         from lambda_function import lambda_handler
         print("Successfully imported lambda_handler function")
@@ -21,12 +19,12 @@ def test_import():
         return False
 
 def test_function_signature():
-    """Test that the function has the correct signature"""
+    """Testing to check if the function has the correct signature"""
     try:
         from lambda_function import lambda_handler
         import inspect
         
-        # Check function signature
+        #Check function signature
         sig = inspect.signature(lambda_handler)
         params = list(sig.parameters.keys())
         
@@ -41,12 +39,12 @@ def test_function_signature():
         return False
 
 def test_syntax():
-    """Test that the code has valid Python syntax"""
+    """Testing if the code has valid Python syntax"""
     try:
         with open('../lambda_code/lambda_function.py', 'r') as f:
             code = f.read()
         
-        # Try to compile the code
+        #Trying to compile the code
         compile(code, 'lambda_function.py', 'exec')
         print("Lambda function has valid Python syntax")
         return True
@@ -58,12 +56,12 @@ def test_syntax():
         return False
 
 def test_required_modules():
-    """Test that required modules are imported"""
+    """Testing to check if the required modules are imported"""
     try:
         with open('../lambda_code/lambda_function.py', 'r') as f:
             code = f.read()
         
-        required_imports = ['json', 'boto3', 'logging', 'os', 'datetime']
+        required_imports = ['json', 'boto3', 'logging', 'datetime']
         missing_imports = []
         
         for module in required_imports:
@@ -81,9 +79,7 @@ def test_required_modules():
         return False
 
 if __name__ == "__main__":
-    print("Starting simple Lambda function tests...")
-    print("=" * 50)
-    
+    print("Starting simple Lambda function test")    
     tests = [
         test_import,
         test_function_signature,
@@ -99,11 +95,10 @@ if __name__ == "__main__":
             passed += 1
         print()
     
-    print("=" * 50)
     print(f"Test Results: {passed}/{total} tests passed")
     
     if passed == total:
-        print("All basic tests passed! Lambda function structure is correct.")
+        print("All basic tests passed and Lambda function is correct.")
     else:
-        print("Some tests failed. Please fix issues before deployment.")
+        print("Some tests failed. Fix issues before deployment.")
         sys.exit(1)
