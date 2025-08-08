@@ -28,7 +28,7 @@ def test_function_signature():
 
         from lambda_function import lambda_handler
 
-        # Check function signature
+        # function signature
         sig = inspect.signature(lambda_handler)
         params = list(sig.parameters.keys())
 
