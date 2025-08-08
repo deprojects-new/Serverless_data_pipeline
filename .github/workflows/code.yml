@@ -131,4 +131,4 @@ jobs:
 
       - name: Upload ETL script to S3
         run: |
-          aws s3 cp src/glue_scripts/etl_script.py s3://assignment5-raw-bucket/glue_scripts/
+          aws s3 cp src/glue_scripts/etl_script.py s3://assignment5-data-lake/glue_scripts/
