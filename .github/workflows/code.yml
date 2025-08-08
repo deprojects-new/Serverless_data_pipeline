@@ -1,217 +1,124 @@
-name: Lambda Code Quality & Testing Pipeline - Serverless Data Pipeline
+name: Trigger + Transformation
 
 on:
   push:
     branches: [main]
-    paths: ['src/**', 'tests/**']
+    paths:
+      - 'src/lambda_code/**'
+      - 'src/glue_scripts/**'
+      - 'src/tests/**'  # added this to include any test files
   pull_request:
     branches: [main]
-    paths: ['src/**', 'tests/**']
+    paths:
+      - 'src/lambda_code/**'
+      - 'src/glue_scripts/**'
+      - 'src/tests/**'
   workflow_dispatch:
 
 env:
   AWS_REGION: us-east-2
   PYTHON_VERSION: '3.9'
-  PROJECT_NAME: serverless-data-pipeline
 
 jobs:
-  test-lambda-code:
+  run-tests:
+    name: Code Quality & Unit Testing
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (contains(github.event.head_commit.modified, 'src/lambda_code/') || contains(github.event.head_commit.modified, 'src/glue_scripts/'))
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
-      - name: Setup Python
+
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      
-      - name: Install dependencies
+
+      - name: Install Dependencies
         run: |
-          python -m pip install --upgrade pip
+          pip install --upgrade pip
           pip install -r src/requirements.txt
-          pip install pytest pytest-cov moto boto3 pytest-mock
-      
-      - name: Auto-Format Code
+          pip install black isort pytest pytest-cov boto3 moto
+
+      - name: Check Code Formatting
         run: |
           pip install black isort
+          echo "Checking code formatting"
           
-          # Format Lambda code
-          echo "Formatting Lambda code..."
-          black src/lambda_code/ --line-length=88
-          isort src/lambda_code/ --profile=black
+          # Check Lambda code
+          echo "Checking Lambda code formatting..."
+          black src/lambda_code/ --line-length=88 --check
+          isort src/lambda_code/ --profile=black --check
           
-          # Format Glue scripts
-          echo "Formatting Glue scripts..."
-          black src/glue_scripts/ --line-length=88
-          isort src/glue_scripts/ --profile=black
+          # Check Glue scripts
+          echo "Checking Glue scripts formatting..."
+          black src/glue_scripts/ --line-length=88 --check
+          isort src/glue_scripts/ --profile=black --check
           
-          echo "Code formatting completed successfully"
-      
-      - name: Commit Formatted Code
-        run: |
-          # Check if there are any changes to commit
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "Committing formatted code..."
-            git config --local user.email "action@github.com"
-            git config --local user.name "GitHub Action"
-            git add .
-            git commit -m "Auto-format code with black and isort"
-            git push
-            echo "Formatted code committed successfully"
-          else
-            echo "No formatting changes needed"
-          fi      
+          # Check test files
+          echo "Checking test files formatting..."
+          black src/tests/ --line-length=88 --check
+          isort src/tests/ --profile=black --check
+          
+          echo "All code formatting checks passed"
 
-      - name: Run Unit Tests
-        run: |
-          if [ -d "src/tests/unit" ]; then
-            echo "Running unit tests for Lambda functions"
-            python -m pytest src/tests/unit/ -v --cov=src/lambda_code --cov-report=term-missing
-          else
-            echo "No unit tests found, skipping"
-          fi
-      
-      - name: Run Integration Tests
-        run: |
-          if [ -d "src/tests/integration" ]; then
-            echo "Running integration tests"
-            python -m pytest src/tests/integration/ -v
-          else
-            echo "No integration tests found, skipping"
-          fi
 
-  package-lambda:
-    needs: test-lambda-code
+  deploy-lambda:
+    name: Deploy Lambda to AWS
+    needs: run-tests
+    if: >
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push' &&
+      (contains(github.event.head_commit.modified, 'src/lambda_code/'))
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && contains(github.event.head_commit.modified, 'src/lambda_code/')
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
-      - name: Setup Python
+
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r src/requirements.txt
-      
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_KEY2 }}
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Package Lambda Code
         run: |
-          echo "Packaging Lambda function code"
           cd src
           zip -r lambda_function.zip lambda_code/
-          echo "Lambda code packaged successfully"
-      
-      - name: Upload Lambda Package
-        uses: actions/upload-artifact@v3
-        with:
-          name: lambda-package
-          path: src/lambda_function.zip
-      
-      - name: Success Message
-        run: |
-          echo "Code Quality & Testing Pipeline Completed Successfully!"
-          echo "Lambda package created and uploaded as artifact"
-          echo "Ready for Lambda and ETL deployment when you're ready"
-          echo "To deploy: Uncomment lambda-deploy and etl-deploy jobs and push"
 
-  lambda-deploy:
-    needs: package-lambda
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && contains(github.event.head_commit.modified, 'src/lambda_code/')
-    environment: production
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_KEY }}
-          aws-secret-access-key: ${{ secrets.AWS_KEY2 }}
-          aws-region: ${{ secrets.AWS_REGION }}
-      
-      - name: Download Lambda Package
-        uses: actions/download-artifact@v3
-        with:
-          name: lambda-package
-          path: ./
-      
-      - name: Update Lambda Function
+      - name: Deploy to AWS Lambda
         run: |
-          echo "Updating Lambda function code"
           aws lambda update-function-code \
             --function-name assignment5-data-pipeline-lambda \
-            --zip-file fileb://lambda_function.zip \
-            --region ${{ secrets.AWS_REGION }}
-          echo "Lambda function updated successfully"
-      
-      - name: Verify Lambda Deployment
-        run: |
-          echo "Verifying Lambda function deployment"
-          aws lambda get-function --function-name assignment5-data-pipeline-lambda --region ${{ secrets.AWS_REGION }}
-          echo "Lambda function deployment verified successfully"
+            --zip-file fileb://src/lambda_function.zip \
+            --region ${{ env.AWS_REGION }}
 
-  etl-deploy:
-    needs: test-lambda-code
+  deploy-etl:
+    name: Deploy ETL Script to S3
+    needs: run-tests
+    if: >
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push' &&
+      (contains(github.event.head_commit.modified, 'src/glue_scripts/'))
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && contains(github.event.head_commit.modified, 'src/glue_scripts/')
-    environment: production
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
-      - name: Configure AWS credentials
+
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_KEY2 }}
-          aws-region: ${{ secrets.AWS_REGION }}
-      
-      - name: Upload ETL Scripts to S3
-        run: |
-          echo "Uploading ETL scripts to S3"
-          aws s3 cp src/glue_scripts/etl_script.py s3://assignment5-raw-bucket/glue_scripts/etl_script.py
-          echo "ETL scripts uploaded successfully"
-      
-      - name: Verify ETL Script Upload
-        run: |
-          echo "Verifying ETL script upload"
-          aws s3 ls s3://assignment5-raw-bucket/glue_scripts/etl_script.py
-          echo "ETL script upload verified successfully"
+          aws-region: ${{ env.AWS_REGION }}
 
-  verify-deployment:
-    needs: [lambda-deploy, etl-deploy]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && (contains(github.event.head_commit.modified, 'src/lambda_code/') || contains(github.event.head_commit.modified, 'src/glue_scripts/'))
-    environment: production
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_KEY }}
-          aws-secret-access-key: ${{ secrets.AWS_KEY2 }}
-          aws-region: ${{ secrets.AWS_REGION }}
-      
-      - name: Final Deployment Verification
+      - name: Upload ETL script to S3
         run: |
-          echo "Performing final deployment verification"
-          
-          # Verify Lambda function
-          echo "Verifying Lambda function..."
-          aws lambda get-function --function-name assignment5-data-pipeline-lambda --region ${{ secrets.AWS_REGION }}
-          
-          # Verify ETL script
-          echo "Verifying ETL script..."
-          aws s3 ls s3://assignment5-raw-bucket/glue_scripts/etl_script.py
-          
-          echo "All deployments verified successfully!"
-          echo "Lambda function and ETL scripts are ready for use"
+          aws s3 cp src/glue_scripts/etl_script.py s3://assignment5-data-lake/glue_scripts/

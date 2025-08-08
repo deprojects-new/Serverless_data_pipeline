@@ -21,20 +21,20 @@ def lambda_handler(event, context):
         logger.info("Lambda function triggered")
         logger.info(f"Event: {json.dumps(event)}")
 
-        # Extract S3 bucket and key from event
+        # Extract the S3 bucket and key from event
         s3_bucket = event["Records"][0]["s3"]["bucket"]["name"]
         s3_key = event["Records"][0]["s3"]["object"]["key"]
 
         logger.info(f"Processing file: s3://{s3_bucket}/{s3_key}")
 
-        # Trigger Glue crawler
+        # Trigger the  Glue crawler
         crawler_name = "assignment5-crawler"
         trigger_glue_crawler(crawler_name)
 
-        # Wait for crawler to complete
+        # Wait for the crawler to complete
         wait_for_crawler_completion(crawler_name)
 
-        # Trigger Glue ETL job
+        # Trigger the Glue ETL job
         job_name = "assignment5-etl-job"
         trigger_glue_job(job_name)
 
