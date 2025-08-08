@@ -13,13 +13,8 @@ variable "database_name" {
   type        = string
 }
 
-variable "s3_raw_bucket" {
-  description = "Name of the S3 bucket for raw data"
-  type        = string
-}
-
-variable "s3_processed_bucket" {
-  description = "Name of the S3 bucket for processed data"
+variable "data_lake_bucket_name" {
+  description = "Name of the S3 data lake bucket"
   type        = string
 }
 

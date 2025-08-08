@@ -16,7 +16,7 @@ resource "aws_glue_crawler" "data_crawler" {
   role          = var.glue_role_arn
 
   s3_target {
-    path = "s3://${var.s3_raw_bucket}/"
+    path = "s3://${var.data_lake_bucket_name}/raw/"
   }
 
   schedule = "cron(0 */6 * * ? *)" # Run every 6 hours
@@ -47,7 +47,7 @@ resource "aws_glue_job" "etl_job" {
   role_arn = var.glue_role_arn
 
   command {
-    script_location = "s3://${var.s3_raw_bucket}/glue_scripts/etl_script.py"
+    script_location = "s3://${var.data_lake_bucket_name}/glue_scripts/etl_script.py"
     python_version  = "3"
   }
 
@@ -56,8 +56,8 @@ resource "aws_glue_job" "etl_job" {
     "--job-bookmark-option"              = "job-bookmark-enable"
     "--enable-continuous-cloudwatch-log" = "true"
     "--enable-metrics"                   = "true"
-    "--raw_bucket"                       = var.s3_raw_bucket
-    "--processed_bucket"                 = var.s3_processed_bucket
+    "--raw_path"                         = "s3://${var.data_lake_bucket_name}/raw/"
+    "--processed_path"                    = "s3://${var.data_lake_bucket_name}/processed/"
   }
 
   execution_property {

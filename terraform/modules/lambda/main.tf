@@ -36,7 +36,7 @@ resource "aws_lambda_permission" "s3_invoke_lambda" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.data_pipeline_lambda.function_name
   principal     = "s3.amazonaws.com"
-  source_arn    = "arn:aws:s3:::${var.s3_raw_bucket}"
+  source_arn    = "arn:aws:s3:::${var.data_lake_bucket_name}"
 }
 
 

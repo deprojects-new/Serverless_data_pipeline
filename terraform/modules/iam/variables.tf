@@ -3,10 +3,11 @@ variable "users" {
   type        = list(string)
 }
 
-variable "s3_bucket_names" {
-  description = "List of S3 bucket names to allow access"
-  type        = list(string)
+variable "data_lake_bucket_name" {
+  description = "Name of the S3 data lake bucket"
+  type        = string
 }
+
 
 variable "environment" {
   description = "Environment name"
@@ -15,15 +16,5 @@ variable "environment" {
 
 variable "project" {
   description = "Project name"
-  type        = string
-}
-
-variable "s3_raw_bucket" {
-  description = "Name of the S3 bucket for raw data"
-  type        = string
-}
-
-variable "s3_processed_bucket" {
-  description = "Name of the S3 bucket for processed data"
   type        = string
 }

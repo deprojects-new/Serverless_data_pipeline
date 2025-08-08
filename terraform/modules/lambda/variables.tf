@@ -3,8 +3,8 @@ variable "lambda_execution_role_arn" {
   type        = string
 }
 
-variable "s3_raw_bucket" {
-  description = "Name of the S3 bucket for raw data"
+variable "data_lake_bucket_name" {
+  description = "Name of the S3 data lake bucket"
   type        = string
 }
 
