@@ -43,17 +43,23 @@ jobs:
         run: |
           pip install black isort
           echo "Checking code formatting"
-          #check lambda_code
+          
+          # Check Lambda code
+          echo "Checking Lambda code formatting..."
           black src/lambda_code/ --line-length=88 --check
           isort src/lambda_code/ --profile=black --check
-          #check glue
-          black
+          
+          # Check Glue scripts
+          echo "Checking Glue scripts formatting..."
           black src/glue_scripts/ --line-length=88 --check
           isort src/glue_scripts/ --profile=black --check
-
-          #check test
+          
+          # Check test files
+          echo "Checking test files formatting..."
           black src/tests/ --line-length=88 --check
           isort src/tests/ --profile=black --check
+          
+          echo "All code formatting checks passed"
 
 
   deploy-lambda:
