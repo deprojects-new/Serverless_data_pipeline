@@ -43,13 +43,13 @@ jobs:
         run: |
           pip install black isort
           echo "Checking code formatting"
-          # #check lambda_code
-          # black src/lambda_code/ --line-length=88 --check
-          # isort src/lambda_code/ --profile=black --check
-          # #check glue
-          # black
-          # black src/glue_scripts/ --line-length=88 --check
-          # isort src/glue_scripts/ --profile=black --check
+          #check lambda_code
+          black src/lambda_code/ --line-length=88 --check
+          isort src/lambda_code/ --profile=black --check
+          #check glue
+          black
+          black src/glue_scripts/ --line-length=88 --check
+          isort src/glue_scripts/ --profile=black --check
 
           #check test
           black src/tests/ --line-length=88 --check
