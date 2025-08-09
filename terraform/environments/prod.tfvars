@@ -1,13 +1,14 @@
 # AWS Region
-AWS_REGION = us-east-2
+aws_region = "us-east-2"
 
-# S3 buckets
-S3_RAW_BUCKET      = assignment5-raw-bucket
-S3_PROCESSED_BUCKET = assignment5-processed-bucket
+# Data Lake Configuration
+data_lake_bucket_name    = "assignment5-data-lake"
+data_lake_versioning     = true
+data_lake_lifecycle_days = 365
 
 # Tags
-ENVIRONMENT = production
-PROJECT     = serverless-data-pipeline
+environment = "production"
+project     = "serverless-data-pipeline"
 
 # Users
 users = ["Abhinav", "Priya", "Srinidhi"]

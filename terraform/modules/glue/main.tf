@@ -32,6 +32,9 @@ resource "aws_glue_crawler" "data_crawler" {
       Partitions = { AddOrUpdateBehavior = "InheritFromTable" }
       Tables     = { AddOrUpdateBehavior = "MergeNewColumns" }
     }
+    Grouping = {
+      TableGroupingPolicy = "CombineCompatibleSchemas"
+    }
   })
 
   tags = {

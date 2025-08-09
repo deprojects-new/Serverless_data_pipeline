@@ -139,11 +139,6 @@ resource "aws_s3_object" "glue_scripts_folder" {
   source = "/dev/null"
 }
 
-resource "aws_s3_object" "temp_folder" {
-  bucket = aws_s3_bucket.data_lake.id
-  key    = "temp/"
-  source = "/dev/null"
-}
 
 resource "aws_s3_object" "archive_folder" {
   bucket = aws_s3_bucket.data_lake.id
