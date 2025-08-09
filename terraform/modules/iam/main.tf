@@ -37,7 +37,20 @@ resource "aws_iam_policy" "data_engineers_policy" {
           "iam:ListRoles",
           "iam:ListPolicies",
           "iam:GetPolicy",
-          "iam:GetPolicyVersion"
+          "iam:GetPolicyVersion",
+          "iam:GetGroup",
+          "iam:GetUser",
+          "iam:GetLoginProfile",
+          "iam:ListRolePolicies",
+          "iam:ListAttachedRolePolicies",
+          "iam:ListUserPolicies",
+          "iam:ListAttachedUserPolicies",
+          "iam:ListGroupPolicies",
+          "iam:ListAttachedGroupPolicies",
+          "iam:ListGroupsForUser",
+          "iam:GetRolePolicy",
+          "iam:GetUserPolicy",
+          "iam:GetGroupPolicy"
         ],
         Resource = "*"
       },
@@ -49,6 +62,14 @@ resource "aws_iam_policy" "data_engineers_policy" {
           "kms:DescribeKey",
           "kms:CreateGrant",
           "kms:ListGrants"
+        ],
+        Resource = "*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "sts:GetCallerIdentity",
+          "sts:AssumeRole"
         ],
         Resource = "*"
       }
