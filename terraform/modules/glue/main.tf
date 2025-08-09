@@ -109,3 +109,10 @@ resource "aws_glue_security_configuration" "glue_security_config" {
     }
   }
 }
+
+resource "aws_s3_object" "etl_script" {
+  bucket = var.data_lake_bucket_name
+  key    = "glue_scripts/etl_script.py"
+  source = "${path.root}/../src/glue_scripts/etl_script.py"
+  etag   = filemd5("${path.root}/../src/glue_scripts/etl_script.py")
+}

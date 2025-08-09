@@ -7,12 +7,14 @@ on:
       - 'src/lambda_code/**'
       - 'src/glue_scripts/**'
       - 'src/tests/**'  # added this to include any test files
+      - 'src/monitoring/**'
   pull_request:
     branches: [main]
     paths:
       - 'src/lambda_code/**'
       - 'src/glue_scripts/**'
       - 'src/tests/**'
+      - 'src/monitoring/**'
   workflow_dispatch:
 
 env:
@@ -58,5 +60,10 @@ jobs:
           echo "Checking test files formatting..."
           black src/tests/ --line-length=88 --check
           isort src/tests/ --profile=black --check
-          
+
+          # Check monitoring files
+          echo "Checking monitoring files formatting..."
+          black src/monitoring/ --line-length=88 --check
+          isort src/monitoring/ --profile=black --check
+
           echo "All code formatting checks passed"
