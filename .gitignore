@@ -28,7 +28,10 @@ wheels/
 .terraform.lock.hcl
 crash.log
 *.tfvars.backup
-*.tfvars
+# Ignore sensitive tfvars but allow environment configs
+terraform.tfvars
+*secret*.tfvars
+*private*.tfvars
 
 # AWS
 .aws/
