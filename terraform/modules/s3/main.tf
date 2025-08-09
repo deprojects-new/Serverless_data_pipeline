@@ -151,3 +151,22 @@ resource "aws_s3_object" "logs_folder" {
   key    = "logs/"
   source = "/dev/null"
 }
+
+resource "aws_s3_object" "invalid_folder" {
+  bucket = aws_s3_bucket.data_lake.id
+  key    = "invalid/"
+  source = "/dev/null"
+}
+
+# S3 bucket notification to trigger Lambda when files are uploaded to raw/
+resource "aws_s3_bucket_notification" "data_lake_notification" {
+  bucket = aws_s3_bucket.data_lake.id
+  depends_on = [var.lambda_permission_id]
+
+  lambda_function {
+    lambda_function_arn = var.lambda_function_arn
+    events              = ["s3:ObjectCreated:*"]
+    filter_prefix       = "raw/"
+    filter_suffix       = ".json"
+  }
+}

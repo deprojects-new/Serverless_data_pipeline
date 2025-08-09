@@ -20,6 +20,8 @@ module "s3" {
   data_lake_lifecycle_days   = var.data_lake_lifecycle_days
   environment                = var.environment
   project                    = var.project
+  lambda_function_arn        = module.lambda.lambda_function_arn
+  lambda_permission_id       = module.lambda.lambda_permission_id
 }
 
 

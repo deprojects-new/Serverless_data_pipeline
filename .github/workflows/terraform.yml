@@ -48,7 +48,7 @@ jobs:
       
       - name: Terraform Plan
         run: |
-          terraform plan -var-file=environments/dev.tfvars
+          terraform plan -var-file=environments/dev.tfvars -out=tfplan
           terraform show -no-color tfplan > plan_output.txt
         working-directory: ./terraform
       
