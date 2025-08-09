@@ -48,15 +48,14 @@ jobs:
       
       - name: Terraform Plan
         run: |
-          terraform plan -var-file="environments/prod.tfvars" -out=tfplan
+          terraform plan -var-file=environments/dev.tfvars
           terraform show -no-color tfplan > plan_output.txt
         working-directory: ./terraform
       
       
   # terraform-deploy:
   #   runs-on: ubuntu-latest
-  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-  #   environment: production
+    # environment: production
   #   steps:
   #     - name: Checkout code
   #       uses: actions/checkout@v3
