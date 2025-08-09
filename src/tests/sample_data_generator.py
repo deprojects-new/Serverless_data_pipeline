@@ -11,7 +11,7 @@ s3_bucket_name = "assignment5-data-lake"
 s3_key = "raw/logs.json"
 local_file = "large_logs.json"
 region = "us-east-2"
-target_size_bytes = 5 * 1024
+target_size_bytes = 5 * 1024 * 1024
 LOG_EVERY = 1000
 
 # event generator
