@@ -2,7 +2,7 @@ name: Trigger + Transformation
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'feature/**']
     paths:
       - 'src/lambda_code/**'
       - 'src/glue_scripts/**'

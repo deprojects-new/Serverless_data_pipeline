@@ -2,7 +2,7 @@ name: Terraform Infrastructure - Serverless Data Pipeline
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'feature/**']
     paths: ['terraform/**']
   pull_request:
     branches: [main]
