@@ -39,7 +39,7 @@ variable "environment" {
 variable "project" {
   description = "Project name"
   type        = string
-  default     = "serverless-data-pipeline"
+  default     = "serverless_data_pipeline"
 }
 
 variable "users" {
