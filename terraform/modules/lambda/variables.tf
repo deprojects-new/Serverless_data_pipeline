@@ -17,3 +17,19 @@ variable "project" {
   description = "Project name"
   type        = string
 }
+
+
+variable "bronze_to_silver_job_name" {
+  description = "Name of the Bronze→Silver job"
+  type        = string
+}
+
+variable "silver_to_gold_job_name" {
+  description = "Name of the Silver→Gold job"  
+  type        = string
+}
+
+variable "state_machine_arn" {
+  description = "ARN of the Step Functions state machine"
+  type        = string
+}
