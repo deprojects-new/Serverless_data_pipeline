@@ -1,12 +1,3 @@
-variable "job_name" {
-  description = "Name of the Glue ETL job"
-  type        = string
-}
-
-variable "crawler_name" {
-  description = "Name of the Glue crawler"
-  type        = string
-}
 
 variable "database_name" {
   description = "Name of the Glue database"
