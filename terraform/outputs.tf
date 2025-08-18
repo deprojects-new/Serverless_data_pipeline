@@ -94,20 +94,11 @@ output "silver_crawler_log_group_name" {
   value       = module.glue.silver_crawler_log_group_name
 }
 
-# CloudWatch Alarm Outputs
-output "bronze_to_silver_job_failure_alarm_arn" {
-  description = "ARN of the Bronze to Silver job failure alarm"
-  value       = module.glue.bronze_to_silver_job_failure_alarm_arn
-}
 
-output "silver_to_gold_job_failure_alarm_arn" {
-  description = "ARN of the Silver to Gold job failure alarm"
-  value       = module.glue.silver_to_gold_job_failure_alarm_arn
-}
 
 output "silver_crawler_failure_alarm_arn" {
   description = "ARN of the Silver crawler failure alarm"
-  value       = module.glue.silver_crawler_failure_alarm_arn
+  value       = module.step_functions.crawler_failure_alarm_arn
 }
 
 output "data_quality_bronze_silver_alarm_arn" {
@@ -130,7 +121,4 @@ output "step_functions_execution_failure_alarm_arn" {
   value       = module.step_functions.step_functions_execution_failure_alarm_arn
 }
 
-output "step_functions_execution_timeout_alarm_arn" {
-  description = "ARN of the Step Functions execution timeout alarm"
-  value       = module.step_functions.step_functions_execution_timeout_alarm_arn
-}
+ 

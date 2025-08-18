@@ -92,7 +92,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "data_lake_lifecycle" {
     }
 
     expiration {
-      days = 7 
+      days = 7
     }
   }
 
