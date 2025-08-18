@@ -16,6 +16,167 @@ The pipeline implements a **Medallion Architecture** with three distinct data la
 
 The architecture is fully serverless, event-driven, and designed for production scalability with comprehensive monitoring and error handling.
 
+## Architectural Diagram
+
+```mermaid
+graph LR
+    %% Data Sources
+    A[Web Application Logs<br/>(JSON Format)]
+    
+    %% S3 Data Lake Layers
+    B[S3 Bronze Layer<br/>(Raw Data)]
+    C[S3 Silver Layer<br/>(Cleaned & Validated)]
+    D[S3 Gold Layer<br/>(Business Metrics)]
+    
+    %% AWS Services
+    E[Lambda Function<br/>(Event Trigger)]
+    F[Step Functions<br/>(Orchestration)]
+    G[Glue ETL Jobs<br/>(Data Processing)]
+    
+    %% Monitoring
+    H[CloudWatch<br/>(Monitoring & Alerts)]
+    
+    %% Data Flow
+    A --> B
+    B --> E
+    E --> F
+    F --> G
+    G --> C
+    C --> G
+    G --> D
+    
+    %% Monitoring Connections
+    E -.-> H
+    F -.-> H
+    G -.-> H
+    
+    %% Styling
+    classDef dataSource fill:#fff8e1,stroke:#f57f17,stroke-width:2px
+    classDef s3Layer fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef awsService fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef monitoring fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    
+    class A dataSource
+    class B,C,D s3Layer
+    class E,F,G awsService
+    class H monitoring
+```
+
+### Architecture Components
+
+**Data Flow**:
+1. **Ingestion**: Web logs or sample data uploaded to S3 Bronze layer
+2. **Trigger**: S3 event triggers Lambda function
+3. **Orchestration**: Step Functions coordinates the entire pipeline
+4. **ETL Processing**: Glue jobs transform data between layers
+5. **Schema Management**: Crawler updates Data Catalog metadata
+6. **Output**: Business-ready metrics in Gold layer
+
+**Service Integration**:
+- **Event-Driven**: S3 → Lambda → Step Functions → Glue
+- **Serverless**: All compute resources scale automatically
+- **Monitored**: CloudWatch provides comprehensive observability
+- **Secured**: IAM roles enforce least-privilege access
+
+**Data Layers**:
+- **Bronze**: Raw, unprocessed data (JSON format)
+- **Silver**: Cleaned, validated, partitioned data (Parquet format)
+- **Gold**: Business aggregations and KPIs (Parquet format)
+
+## Project Structure
+
+This section outlines the directory and file organization of the serverless data pipeline project, providing a clear map of where each component resides and its purpose.
+
+```
+Serverless_data_pipeline/
+├── .github/                                # GitHub Actions workflows for CI/CD
+│   └── workflows/
+│       ├── code.yml                        # Code quality checks and unit testing (Black, Isort, 
+│       └── terraform.yml                   # Terraform infrastructure validation and deployment
+├── src/                                    # Source code for Lambda functions and Glue ETL jobs
+│   ├── glue_scripts/                       # AWS Glue ETL job scripts
+│   │   ├── bronze_silver.py                # ETL script: Transforms raw JSON to clean Parquet (Bronze to Silver layer)
+│   │   └── silver_gold.py                  # ETL script: Transforms Silver data to Gold layer business metrics
+│   ├── lambda_code/                        # AWS Lambda function code
+│   │   ├── lambda_function.py              # S3 event trigger for the Step Functions pipeline
+│   │   └── requirements.txt                # Python dependencies for Lambda function
+│   ├── monitoring/                         # Scripts for pipeline monitoring and observability
+│   │   ├── pipeline_monitor.py             # Pipeline monitoring and health checks
+│   │   └── requirements.txt                # Python dependencies for monitoring scripts
+│   ├── tests/                              # Unit and integration tests for code components
+│   │   ├── integration/                    # Integration test modules
+│   │   │   └── __init__.py
+│   │   ├── unit/                           # Unit test modules
+│   │   │   └── __init__.py
+│   │   ├── sample_data_generator.py        # Python script to generate and upload sample web log data to S3
+│   │   ├── simple_test.py                  # Basic test scripts for pipeline validation
+│   │   ├── test_lambda_logic.py            # Unit tests for Lambda function logic
+│   │   └── requirements_scheduler.txt      # Dependencies for scheduled test execution
+│   └── requirements.txt                    # Global Python dependencies for the project
+├── terraform/                              # Infrastructure as Code (IaC) for deploying AWS resources
+│   ├── main.tf                             # Main Terraform configuration file
+│   ├── variables.tf                        # Global input variables for the Terraform project
+│   ├── outputs.tf                          # Global output values from the Terraform deployment
+│   ├── versions.tf                         # Terraform and provider version constraints
+│   ├── environments/                       # Environment-specific configuration files
+│   │   ├── dev.tfvars                      # Development environment variables
+│   │   └── prod.tfvars                     # Production environment variables
+│   └── modules/                            # Reusable Terraform modules for specific AWS services
+│       ├── glue/                           # Defines AWS Glue resources (ETL jobs, crawlers, Data Catalog database)
+│       │   ├── main.tf                     # Glue module's main configuration
+│       │   ├── variables.tf                # Glue module's input variables
+│       │   └── outputs.tf                  # Glue module's output values
+│       ├── iam/                            # Defines AWS IAM roles and policies for service permissions
+│       │   ├── main.tf                     # IAM module's main configuration
+│       │   ├── variables.tf                # IAM module's input variables
+│       │   └── outputs.tf                  # IAM module's output values
+│       ├── lambda/                         # Defines AWS Lambda function and event triggers
+│       │   ├── main.tf                     # Lambda module's main configuration
+│       │   ├── variables.tf                # Lambda module's input variables
+│       │   └── outputs.tf                  # Lambda module's output values
+│       ├── s3/                             # Defines AWS S3 data lake bucket and its configurations
+│       │   ├── main.tf                     # S3 module's main configuration
+│       │   ├── variables.tf                # S3 module's input variables
+│       │   └── outputs.tf                  # S3 module's output values
+│       └── step_functions/                 # Defines AWS Step Functions state machine for pipeline orchestration
+│           ├── main.tf                     # Step Functions module's main configuration
+│           ├── variables.tf                # Step Functions module's input variables
+│           └── outputs.tf                  # Step Functions module's output values
+├── venv/                                   # Python virtual environment (local development)
+├── LAMBDA_IMPLEMENTATION_SUMMARY.md        # Summary of Lambda function implementation details
+└── README.md                               # This project documentation and overview
+```
+
+### Key Directory Purposes
+
+**`.github/workflows/`**: Contains CI/CD pipeline configurations for automated testing and deployment
+- **`code.yml`**: Runs code quality checks (Black, Isort) and unit tests (Pytest)
+- **`terraform.yml`**: Validates and plans Terraform infrastructure changes
+
+**`src/`**: Contains all application source code
+- **`glue_scripts/`**: ETL job scripts that transform data between Bronze, Silver, and Gold layers
+- **`lambda_code/`**: Lambda function that triggers the data pipeline on S3 events
+- **`monitoring/`**: Scripts for pipeline monitoring, health checks, and observability
+- **`tests/`**: Comprehensive test suite including unit tests, integration tests, and data generation
+
+**`terraform/`**: Infrastructure as Code definitions
+- **`modules/`**: Reusable Terraform modules for each AWS service
+- **`environments/`**: Environment-specific configuration files
+- **`main.tf`**: Root Terraform configuration that orchestrates all modules
+
+**`venv/`**: Python virtual environment for local development and testing
+
+### File Naming Conventions
+
+- **`main.tf`**: Primary configuration file for each Terraform module
+- **`variables.tf`**: Input variables and their descriptions
+- **`outputs.tf`**: Output values from Terraform resources
+- **`requirements.txt`**: Python package dependencies
+- **`*.py`**: Python source code files
+- **`*.yml`**: YAML configuration files for CI/CD
+- **`*.tf`**: Terraform configuration files
+- **`*.tfvars`**: Terraform variable files for environment-specific values
+
 ## AWS Services and Their Roles
 
 ### Core Services
@@ -58,7 +219,7 @@ The architecture is fully serverless, event-driven, and designed for production 
 ## Data Flow and Processing Logic
 
 ### 1. Data Ingestion (Bronze Layer)
-**Trigger**: S3 object creation in `s3://bucket/bronze/`
+**Trigger**: S3 object creation in `s3://assignment5-data-lake/bronze/`
 **Process**: Lambda function receives S3 event and triggers Step Functions execution
 **Data Format**: Raw JSON web logs with fields like event_id, event_ts, session_id, method, path, status, etc.
 
@@ -70,7 +231,7 @@ The architecture is fully serverless, event-driven, and designed for production 
 - **Data Quality Checks**: Validates HTTP status codes, methods, and performance metrics
 - **PII Removal**: Masks or removes sensitive client information
 - **Partitioning**: Organizes data by year/month/day for efficient querying
-- **Output**: Clean Parquet files in `s3://bucket/silver/`
+- **Output**: Clean Parquet files in `s3://assignment5-data-lake/silver/`
 
 
 
@@ -81,7 +242,7 @@ The architecture is fully serverless, event-driven, and designed for production 
 - **Business Aggregations**: Calculates daily metrics and session analytics
 - **KPI Generation**: Computes error rates, success rates, and performance indicators
 - **Deduplication**: Prevents duplicate records in fallback scenarios
-- **Output**: Business-ready metrics in `s3://bucket/gold/`
+- **Output**: Business-ready metrics in `s3://assignment5-data-lake/gold/`
 
 
 
@@ -132,7 +293,7 @@ The architecture is fully serverless, event-driven, and designed for production 
 
 **Lambda Execution Role**
 - Permissions: S3 read access, Step Functions execution, CloudWatch logging
-- Scope: Limited to specific bucket and state machine
+- Scope: Limited to assignment5-data-lake bucket and state machine
 
 **Glue Execution Role**
 - Permissions: S3 read/write access, Glue Data Catalog operations, CloudWatch logging
@@ -149,7 +310,7 @@ The architecture is fully serverless, event-driven, and designed for production 
 ### Security Features
 
 - **Encryption**: AES256 server-side encryption for all data at rest
-- **Access Control**: Public access blocking on S3 bucket
+- **Access Control**: Public access blocking on assignment5-data-lake bucket
 - **Audit Trail**: Comprehensive CloudWatch logging for all operations
 - **Least Privilege**: Minimal required permissions for each service
 
