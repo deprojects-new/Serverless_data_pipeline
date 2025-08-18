@@ -19,121 +19,47 @@ The architecture is fully serverless, event-driven, and designed for production 
 ## Architectural Diagram
 
 ```mermaid
-graph TB
-    %% External Data Sources
-    subgraph "Data Sources"
-        A[Web Application Logs]
-        [Sample Data Generator]
-    end
-
-    %% S3 Data Lake
-    subgraph "S3 Data Lake - assignment5-data-lake"
-        subgraph "Bronze Layer"
-            C[bronze/raw_logs.json]
-        end
-        
-        subgraph "Silver Layer"
-            D[silver/year=2024/month=01/day=15/]
-            E[silver/year=2024/month=01/day=16/]
-        end
-        
-        subgraph "Gold Layer"
-            F[gold/daily_metrics/]
-            G[gold/session_metrics/]
-        end
-        
-        subgraph "Supporting"
-            H[glue_scripts/]
-            
-        end
-    end
-
+graph LR
+    %% Data Sources
+    A[Web Application Logs<br/>(JSON Format)]
+    
+    %% S3 Data Lake Layers
+    B[S3 Bronze Layer<br/>(Raw Data)]
+    C[S3 Silver Layer<br/>(Cleaned & Validated)]
+    D[S3 Gold Layer<br/>(Business Metrics)]
+    
     %% AWS Services
-    subgraph "AWS Lambda"
-        J[Lambda Function<br/>S3 Event Trigger]
-    end
-
-    subgraph "AWS Step Functions"
-        K[State Machine<br/>Pipeline Orchestration]
-        K1[SetExecutionContext]
-        K2[StartBronzeToSilverJob]
-        K3[WaitForJobCompletion]
-        K4[StartCrawlerBackground]
-        K5[StartSilverToGoldJob]
-    end
-
-    subgraph "AWS Glue"
-        L[Bronze→Silver ETL Job<br/>Data Cleaning & Validation]
-        M[Silver→Gold ETL Job<br/>Business Aggregations]
-        N[Silver Crawler<br/>Schema Discovery]
-        O[Glue Data Catalog<br/>Metadata Management]
-    end
-
-    subgraph "AWS IAM"
-        P[Lambda Execution Role]
-        Q[Glue Execution Role]
-        R[Step Functions Role]
-        S[Data Engineers Group]
-    end
-
-    subgraph "Amazon CloudWatch"
-        T[Logs]
-        U[Metrics]
-        V[Alarms]
-    end
-
-    %% Data Flow Connections
-    A --> C
-    B --> C
-    C --> J
-    J --> K
-    K --> K1
-    K1 --> K2
-    K2 --> L
-    L --> D
-    K2 --> K3
-    K3 --> K4
-    K4 --> N
-    N --> O
-    K4 --> K5
-    K5 --> M
-    D --> M
-    M --> F
-    M --> G
-
-    %% IAM Connections
-    J -.-> P
-    L -.-> Q
-    M -.-> Q
-    N -.-> Q
-    K -.-> R
-    S -.-> C
-    S -.-> D
-    S -.-> F
-
+    E[Lambda Function<br/>(Event Trigger)]
+    F[Step Functions<br/>(Orchestration)]
+    G[Glue ETL Jobs<br/>(Data Processing)]
+    
+    %% Monitoring
+    H[CloudWatch<br/>(Monitoring & Alerts)]
+    
+    %% Data Flow
+    A --> B
+    B --> E
+    E --> F
+    F --> G
+    G --> C
+    C --> G
+    G --> D
+    
     %% Monitoring Connections
-    J -.-> T
-    L -.-> T
-    M -.-> T
-    K -.-> T
-    J -.-> U
-    L -.-> U
-    M -.-> U
-    K -.-> U
-    U -.-> V
-
+    E -.-> H
+    F -.-> H
+    G -.-> H
+    
     %% Styling
+    classDef dataSource fill:#fff8e1,stroke:#f57f17,stroke-width:2px
     classDef s3Layer fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef awsService fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef iamService fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef monitoringService fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-    classDef dataSource fill:#fff8e1,stroke:#f57f17,stroke-width:2px
-
-    class C,D,E,F,G,H,I s3Layer
-    class J,K,L,M,N,O awsService
-    class P,Q,R,S iamService
-    class T,U,V monitoringService
-    class A,B dataSource
+    classDef monitoring fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    
+    class A dataSource
+    class B,C,D s3Layer
+    class E,F,G awsService
+    class H monitoring
 ```
 
 ### Architecture Components
@@ -156,6 +82,100 @@ graph TB
 - **Bronze**: Raw, unprocessed data (JSON format)
 - **Silver**: Cleaned, validated, partitioned data (Parquet format)
 - **Gold**: Business aggregations and KPIs (Parquet format)
+
+## Project Structure
+
+This section outlines the directory and file organization of the serverless data pipeline project, providing a clear map of where each component resides and its purpose.
+
+```
+Serverless_data_pipeline/
+├── .github/                                # GitHub Actions workflows for CI/CD
+│   └── workflows/
+│       ├── code.yml                        # Code quality checks and unit testing (Black, Isort, 
+│       └── terraform.yml                   # Terraform infrastructure validation and deployment
+├── src/                                    # Source code for Lambda functions and Glue ETL jobs
+│   ├── glue_scripts/                       # AWS Glue ETL job scripts
+│   │   ├── bronze_silver.py                # ETL script: Transforms raw JSON to clean Parquet (Bronze to Silver layer)
+│   │   └── silver_gold.py                  # ETL script: Transforms Silver data to Gold layer business metrics
+│   ├── lambda_code/                        # AWS Lambda function code
+│   │   ├── lambda_function.py              # S3 event trigger for the Step Functions pipeline
+│   │   └── requirements.txt                # Python dependencies for Lambda function
+│   ├── monitoring/                         # Scripts for pipeline monitoring and observability
+│   │   ├── pipeline_monitor.py             # Pipeline monitoring and health checks
+│   │   └── requirements.txt                # Python dependencies for monitoring scripts
+│   ├── tests/                              # Unit and integration tests for code components
+│   │   ├── integration/                    # Integration test modules
+│   │   │   └── __init__.py
+│   │   ├── unit/                           # Unit test modules
+│   │   │   └── __init__.py
+│   │   ├── sample_data_generator.py        # Python script to generate and upload sample web log data to S3
+│   │   ├── simple_test.py                  # Basic test scripts for pipeline validation
+│   │   ├── test_lambda_logic.py            # Unit tests for Lambda function logic
+│   │   └── requirements_scheduler.txt      # Dependencies for scheduled test execution
+│   └── requirements.txt                    # Global Python dependencies for the project
+├── terraform/                              # Infrastructure as Code (IaC) for deploying AWS resources
+│   ├── main.tf                             # Main Terraform configuration file
+│   ├── variables.tf                        # Global input variables for the Terraform project
+│   ├── outputs.tf                          # Global output values from the Terraform deployment
+│   ├── versions.tf                         # Terraform and provider version constraints
+│   ├── environments/                       # Environment-specific configuration files
+│   │   ├── dev.tfvars                      # Development environment variables
+│   │   └── prod.tfvars                     # Production environment variables
+│   └── modules/                            # Reusable Terraform modules for specific AWS services
+│       ├── glue/                           # Defines AWS Glue resources (ETL jobs, crawlers, Data Catalog database)
+│       │   ├── main.tf                     # Glue module's main configuration
+│       │   ├── variables.tf                # Glue module's input variables
+│       │   └── outputs.tf                  # Glue module's output values
+│       ├── iam/                            # Defines AWS IAM roles and policies for service permissions
+│       │   ├── main.tf                     # IAM module's main configuration
+│       │   ├── variables.tf                # IAM module's input variables
+│       │   └── outputs.tf                  # IAM module's output values
+│       ├── lambda/                         # Defines AWS Lambda function and event triggers
+│       │   ├── main.tf                     # Lambda module's main configuration
+│       │   ├── variables.tf                # Lambda module's input variables
+│       │   └── outputs.tf                  # Lambda module's output values
+│       ├── s3/                             # Defines AWS S3 data lake bucket and its configurations
+│       │   ├── main.tf                     # S3 module's main configuration
+│       │   ├── variables.tf                # S3 module's input variables
+│       │   └── outputs.tf                  # S3 module's output values
+│       └── step_functions/                 # Defines AWS Step Functions state machine for pipeline orchestration
+│           ├── main.tf                     # Step Functions module's main configuration
+│           ├── variables.tf                # Step Functions module's input variables
+│           └── outputs.tf                  # Step Functions module's output values
+├── venv/                                   # Python virtual environment (local development)
+├── LAMBDA_IMPLEMENTATION_SUMMARY.md        # Summary of Lambda function implementation details
+└── README.md                               # This project documentation and overview
+```
+
+### Key Directory Purposes
+
+**`.github/workflows/`**: Contains CI/CD pipeline configurations for automated testing and deployment
+- **`code.yml`**: Runs code quality checks (Black, Isort) and unit tests (Pytest)
+- **`terraform.yml`**: Validates and plans Terraform infrastructure changes
+
+**`src/`**: Contains all application source code
+- **`glue_scripts/`**: ETL job scripts that transform data between Bronze, Silver, and Gold layers
+- **`lambda_code/`**: Lambda function that triggers the data pipeline on S3 events
+- **`monitoring/`**: Scripts for pipeline monitoring, health checks, and observability
+- **`tests/`**: Comprehensive test suite including unit tests, integration tests, and data generation
+
+**`terraform/`**: Infrastructure as Code definitions
+- **`modules/`**: Reusable Terraform modules for each AWS service
+- **`environments/`**: Environment-specific configuration files
+- **`main.tf`**: Root Terraform configuration that orchestrates all modules
+
+**`venv/`**: Python virtual environment for local development and testing
+
+### File Naming Conventions
+
+- **`main.tf`**: Primary configuration file for each Terraform module
+- **`variables.tf`**: Input variables and their descriptions
+- **`outputs.tf`**: Output values from Terraform resources
+- **`requirements.txt`**: Python package dependencies
+- **`*.py`**: Python source code files
+- **`*.yml`**: YAML configuration files for CI/CD
+- **`*.tf`**: Terraform configuration files
+- **`*.tfvars`**: Terraform variable files for environment-specific values
 
 ## AWS Services and Their Roles
 
