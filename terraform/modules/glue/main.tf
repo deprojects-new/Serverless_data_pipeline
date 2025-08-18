@@ -13,25 +13,25 @@ resource "aws_glue_crawler" "silver_crawler" {
   name          = "${var.project}-silver-crawler"
   database_name = aws_glue_catalog_database.data_database.name
   role          = var.glue_role_arn
-  
+
   s3_target {
     path = "s3://${var.data_lake_bucket_name}/silver/"
   }
-  
+
   # Configure for Parquet data
   schema_change_policy {
     update_behavior = "UPDATE_IN_DATABASE"
     delete_behavior = "DEPRECATE_IN_DATABASE"
   }
-  
+
   # prefix for silver layer
   table_prefix = "silver_"
-  
+
   # Recrawl policy - run when new data is detected
   recrawl_policy {
     recrawl_behavior = "CRAWL_EVERYTHING"
   }
-  
+
   # Configuration for better performance
   configuration = jsonencode({
     "Version" = 1.0
@@ -44,10 +44,10 @@ resource "aws_glue_crawler" "silver_crawler" {
       }
     }
   })
-  
+
   # Schedule - to keep the metadata updated
-  schedule = "cron(0 */4 * * ? *)" 
-  
+  schedule = "cron(0 */4 * * ? *)"
+
   tags = {
     Name  = "${var.project}-silver-crawler"
     Layer = "medallion-silver"
@@ -59,7 +59,7 @@ resource "aws_glue_crawler" "silver_crawler" {
 resource "aws_cloudwatch_log_group" "silver_crawler_log_group" {
   name              = "/aws-glue/crawlers/assignment5-silver-crawler"
   retention_in_days = 0
-  
+
   tags = {
     Name        = "${var.project}-silver-crawler-logs"
     Environment = var.environment
@@ -78,27 +78,27 @@ resource "aws_glue_job" "bronze_to_silver_job" {
   }
 
   default_arguments = {
-    "--job-language"        = "python"
-    "--job-bookmark-option" = "job-bookmark-enable"
-    "--project"             = var.project
-    "--bucket"              = var.data_lake_bucket_name
-    "--database"            = aws_glue_catalog_database.data_database.name
-    "--continuous-log-logGroup" = aws_cloudwatch_log_group.bronze_silver_log_group.name
+    "--job-language"                     = "python"
+    "--job-bookmark-option"              = "job-bookmark-enable"
+    "--project"                          = var.project
+    "--bucket"                           = var.data_lake_bucket_name
+    "--database"                         = aws_glue_catalog_database.data_database.name
+    "--continuous-log-logGroup"          = aws_cloudwatch_log_group.bronze_silver_log_group.name
     "--enable-continuous-cloudwatch-log" = "true"
-    "--enable-metrics"      = "true"
-    "--enable-spark-ui"     = "true"
-    "--enable-job-insights" = "true"
-    "--enable-spark-ui"     = "true"
-    "--enable-metrics"      = "true"
+    "--enable-metrics"                   = "true"
+    "--enable-spark-ui"                  = "true"
+    "--enable-job-insights"              = "true"
+    "--enable-spark-ui"                  = "true"
+    "--enable-metrics"                   = "true"
     "--enable-continuous-cloudwatch-log" = "true"
-    "--enable-continuous-log-filter" = "true"
-    "--continuous-log-logGroup" = aws_cloudwatch_log_group.bronze_silver_log_group.name
-    "--continuous-log-logStreamPrefix" = "bronze-silver-"
+    "--enable-continuous-log-filter"     = "true"
+    "--continuous-log-logGroup"          = aws_cloudwatch_log_group.bronze_silver_log_group.name
+    "--continuous-log-logStreamPrefix"   = "bronze-silver-"
   }
 
   glue_version = "4.0"
   max_retries  = 1
-  timeout      = 30  # 30 minutes max
+  timeout      = 30 # 30 minutes max
 
 
 
@@ -120,27 +120,27 @@ resource "aws_glue_job" "silver_to_gold_job" {
   }
 
   default_arguments = {
-    "--job-language"        = "python"
-    "--job-bookmark-option" = "job-bookmark-enable"
-    "--project"             = var.project
-    "--bucket"              = var.data_lake_bucket_name
-    "--database"            = aws_glue_catalog_database.data_database.name
-    "--continuous-log-logGroup" = aws_cloudwatch_log_group.silver_gold_log_group.name
+    "--job-language"                     = "python"
+    "--job-bookmark-option"              = "job-bookmark-enable"
+    "--project"                          = var.project
+    "--bucket"                           = var.data_lake_bucket_name
+    "--database"                         = aws_glue_catalog_database.data_database.name
+    "--continuous-log-logGroup"          = aws_cloudwatch_log_group.silver_gold_log_group.name
     "--enable-continuous-cloudwatch-log" = "true"
-    "--enable-metrics"      = "true"
-    "--enable-spark-ui"     = "true"
-    "--enable-job-insights" = "true"
-    "--enable-spark-ui"     = "true"
-    "--enable-metrics"      = "true"
+    "--enable-metrics"                   = "true"
+    "--enable-spark-ui"                  = "true"
+    "--enable-job-insights"              = "true"
+    "--enable-spark-ui"                  = "true"
+    "--enable-metrics"                   = "true"
     "--enable-continuous-cloudwatch-log" = "true"
-    "--enable-continuous-log-filter" = "true"
-    "--continuous-log-logGroup" = aws_cloudwatch_log_group.silver_gold_log_group.name
-    "--continuous-log-logStreamPrefix" = "silver-gold-"
+    "--enable-continuous-log-filter"     = "true"
+    "--continuous-log-logGroup"          = aws_cloudwatch_log_group.silver_gold_log_group.name
+    "--continuous-log-logStreamPrefix"   = "silver-gold-"
   }
 
   glue_version = "4.0"
   max_retries  = 1
-  timeout      = 30 
+  timeout      = 30
 
 
   tags = {
@@ -159,7 +159,7 @@ resource "aws_s3_object" "bronze_to_silver_script" {
   etag   = filemd5("${path.root}/../src/glue_scripts/bronze_silver.py")
 
   tags = {
-    Name = "bronze-to-silver-script"
+    Name  = "bronze-to-silver-script"
     Layer = "medallion-silver"
   }
 }
@@ -172,7 +172,7 @@ resource "aws_s3_object" "silver_to_gold_script" {
   etag   = filemd5("${path.root}/../src/glue_scripts/silver_gold.py")
 
   tags = {
-    Name = "silver-to-gold-script"
+    Name  = "silver-to-gold-script"
     Layer = "medallion-gold"
   }
 }
@@ -180,7 +180,7 @@ resource "aws_s3_object" "silver_to_gold_script" {
 # Professional Glue Job Log Groups
 resource "aws_cloudwatch_log_group" "bronze_silver_log_group" {
   name              = "/aws-glue/jobs/assignment5-bronze-silver"
-  retention_in_days = 0  # Never expire - matches AWS Glue default behavior
+  retention_in_days = 0 # Never expire - matches AWS Glue default behavior
 
   tags = {
     Name        = "assignment5-bronze-silver-logs"
@@ -193,7 +193,7 @@ resource "aws_cloudwatch_log_group" "bronze_silver_log_group" {
 
 resource "aws_cloudwatch_log_group" "silver_gold_log_group" {
   name              = "/aws-glue/jobs/assignment5-silver-gold"
-  retention_in_days = 0  
+  retention_in_days = 0
   tags = {
     Name        = "assignment5-silver-gold-logs"
     Environment = var.environment
@@ -204,9 +204,9 @@ resource "aws_cloudwatch_log_group" "silver_gold_log_group" {
 }
 
 # CloudWatch Alarms for Glue Jobs and Crawler
- 
 
- 
+
+
 
 
 
@@ -219,10 +219,10 @@ resource "aws_cloudwatch_metric_alarm" "data_quality_bronze_silver" {
   namespace           = "AWS/Glue"
   period              = 300
   statistic           = "Sum"
-  threshold           = 100  # Alert if less than 100 records processed
+  threshold           = 100 # Alert if less than 100 records processed
   alarm_description   = "Alarm when Bronze to Silver job processes very few records (potential data issue)"
-  alarm_actions       = [] 
-  
+  alarm_actions       = []
+
   dimensions = {
     JobName = aws_glue_job.bronze_to_silver_job.name
     Type    = "driver"
@@ -244,10 +244,10 @@ resource "aws_cloudwatch_metric_alarm" "data_quality_silver_gold" {
   namespace           = "AWS/Glue"
   period              = 300
   statistic           = "Sum"
-  threshold           = 50   # Alert if less than 50 records processed
+  threshold           = 50 # Alert if less than 50 records processed
   alarm_description   = "Alarm when Silver to Gold job processes very few records (potential data issue)"
-  alarm_actions       = []  
-  
+  alarm_actions       = []
+
   dimensions = {
     JobName = aws_glue_job.silver_to_gold_job.name
     Type    = "driver"

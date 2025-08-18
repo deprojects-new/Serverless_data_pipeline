@@ -75,7 +75,7 @@ resource "aws_sfn_state_machine" "data_pipeline" {
         Next = "StartSilverToGoldJob"
       }
 
-      # Step 5: Log Crawler Error (Non-Blocking)
+      # Step 5: Log Crawler Error
       LogCrawlerError = {
         Type = "Pass"
         Parameters = {
@@ -193,7 +193,7 @@ resource "aws_cloudwatch_metric_alarm" "step_functions_execution_failure" {
   statistic           = "Sum"
   threshold           = 0
   alarm_description   = "Alarm when Step Functions execution fails"
-  alarm_actions       = []  # Add SNS topic ARN here for notifications
+  alarm_actions       = []  
 
   dimensions = {
     StateMachineArn = aws_sfn_state_machine.data_pipeline.arn
@@ -205,8 +205,6 @@ resource "aws_cloudwatch_metric_alarm" "step_functions_execution_failure" {
     Project     = var.project
   }
 }
-
-# CloudWatch Alarm for Step Functions Execution Timeouts
  
 
 # CloudWatch Alarm for Crawler Failures (Separate Monitoring)
@@ -220,7 +218,7 @@ resource "aws_cloudwatch_metric_alarm" "crawler_failure" {
   statistic           = "Average"
   threshold           = 80  # Alert if success rate drops below 80%
   alarm_description   = "Alarm when Silver crawler success rate drops below 80%"
-  alarm_actions       = []  # Add SNS topic ARN here for notifications
+  alarm_actions       = []  
 
   dimensions = {
     CrawlerName = var.silver_crawler_name

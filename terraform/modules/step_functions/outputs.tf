@@ -30,4 +30,4 @@ output "crawler_failure_alarm_arn" {
   value       = aws_cloudwatch_metric_alarm.crawler_failure.arn
 }
 
- 
+

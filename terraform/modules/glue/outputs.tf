@@ -55,7 +55,7 @@ output "silver_crawler_log_group_name" {
   description = "Name of the Silver Crawler log group"
   value       = aws_cloudwatch_log_group.silver_crawler_log_group.name
 }
- 
+
 
 
 
