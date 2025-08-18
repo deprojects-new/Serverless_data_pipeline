@@ -24,7 +24,10 @@ output "step_functions_execution_failure_alarm_arn" {
   value       = aws_cloudwatch_metric_alarm.step_functions_execution_failure.arn
 }
 
-output "step_functions_execution_timeout_alarm_arn" {
-  description = "ARN of the Step Functions execution timeout alarm"
-  value       = aws_cloudwatch_metric_alarm.step_functions_execution_timeout.arn
+
+output "crawler_failure_alarm_arn" {
+  description = "ARN of the Silver crawler failure alarm"
+  value       = aws_cloudwatch_metric_alarm.crawler_failure.arn
 }
+
+ 
