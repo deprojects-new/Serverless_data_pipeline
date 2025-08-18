@@ -25,7 +25,7 @@ variable "bronze_to_silver_job_name" {
 }
 
 variable "silver_to_gold_job_name" {
-  description = "Name of the Silver→Gold job"  
+  description = "Name of the Silver→Gold job"
   type        = string
 }
 

@@ -56,21 +56,8 @@ output "silver_crawler_log_group_name" {
   value       = aws_cloudwatch_log_group.silver_crawler_log_group.name
 }
 
-# CloudWatch Alarm 
-output "bronze_to_silver_job_failure_alarm_arn" {
-  description = "ARN of the Bronze to Silver job failure alarm"
-  value       = aws_cloudwatch_metric_alarm.bronze_to_silver_job_failure.arn
-}
 
-output "silver_to_gold_job_failure_alarm_arn" {
-  description = "ARN of the Silver to Gold job failure alarm"
-  value       = aws_cloudwatch_metric_alarm.silver_to_gold_job_failure.arn
-}
 
-output "silver_crawler_failure_alarm_arn" {
-  description = "ARN of the Silver crawler failure alarm"
-  value       = aws_cloudwatch_metric_alarm.silver_crawler_failure.arn
-}
 
 output "data_quality_bronze_silver_alarm_arn" {
   description = "ARN of the Bronze to Silver data quality alarm"

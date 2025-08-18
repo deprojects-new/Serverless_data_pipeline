@@ -1,27 +1,27 @@
 # Lambda function
 resource "aws_lambda_function" "data_pipeline_lambda" {
-  filename         = data.archive_file.lambda_zip.output_path
-  function_name    = "${var.project}-data-pipeline-lambda"
-  role            = var.lambda_execution_role_arn
-  handler         = "lambda_function.lambda_handler"
-  runtime         = "python3.9"
-  timeout         = 300  # 5 minutes
-  memory_size     = 128
+  filename      = data.archive_file.lambda_zip.output_path
+  function_name = "${var.project}-data-pipeline-lambda"
+  role          = var.lambda_execution_role_arn
+  handler       = "lambda_function.lambda_handler"
+  runtime       = "python3.9"
+  timeout       = 300 # 5 minutes
+  memory_size   = 128
 
   #  logging configuration to use custom log group
   logging_config {
-    log_group = aws_cloudwatch_log_group.lambda_log_group.name
+    log_group  = aws_cloudwatch_log_group.lambda_log_group.name
     log_format = "Text"
   }
 
   environment {
     variables = {
-      ENVIRONMENT = var.environment
-      PROJECT     = var.project
+      ENVIRONMENT               = var.environment
+      PROJECT                   = var.project
       BRONZE_TO_SILVER_JOB_NAME = var.bronze_to_silver_job_name
-      SILVER_TO_GOLD_JOB_NAME = var.silver_to_gold_job_name
-      STATE_MACHINE_ARN = var.state_machine_arn
-      LOG_GROUP_NAME = aws_cloudwatch_log_group.lambda_log_group.name
+      SILVER_TO_GOLD_JOB_NAME   = var.silver_to_gold_job_name
+      STATE_MACHINE_ARN         = var.state_machine_arn
+      LOG_GROUP_NAME            = aws_cloudwatch_log_group.lambda_log_group.name
     }
   }
 
@@ -52,7 +52,7 @@ resource "aws_lambda_permission" "s3_invoke_lambda" {
 # Professional Lambda Log Group
 resource "aws_cloudwatch_log_group" "lambda_log_group" {
   name              = "/aws/lambda/assignment5-lambda"
-  retention_in_days = 0  # Never expire - matches AWS Lambda default behavior
+  retention_in_days = 0 # Never expire - matches AWS Lambda default behavior
 
   tags = {
     Name        = "assignment5-lambda-logs"

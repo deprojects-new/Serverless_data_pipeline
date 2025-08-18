@@ -49,13 +49,13 @@ resource "aws_s3_bucket_lifecycle_configuration" "data_lake_lifecycle" {
     id     = "bronze_data_lifecycle"
     status = "Enabled"
     filter { prefix = "bronze/" }
-    
+
     transition {
       days          = 30
       storage_class = "STANDARD_IA"
     }
     transition {
-      days          = 90  
+      days          = 90
       storage_class = "GLACIER"
     }
   }
@@ -64,18 +64,18 @@ resource "aws_s3_bucket_lifecycle_configuration" "data_lake_lifecycle" {
     id     = "silver_data_lifecycle"
     status = "Enabled"
     filter { prefix = "silver/" }
-    
+
     transition {
       days          = 60
-      storage_class = "STANDARD_IA" 
+      storage_class = "STANDARD_IA"
     }
   }
 
   rule {
-    id     = "gold_data_lifecycle" 
+    id     = "gold_data_lifecycle"
     status = "Enabled"
     filter { prefix = "gold/" }
-    
+
     # Keep gold data in standard (frequently accessed)
     transition {
       days          = 180
@@ -92,7 +92,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "data_lake_lifecycle" {
     }
 
     expiration {
-      days = 7  # Delete temp data after 7 days
+      days = 7
     }
   }
 
@@ -153,7 +153,7 @@ resource "aws_s3_object" "athena_results_folder" {
 
 # S3 notifications - triggering on bronze
 resource "aws_s3_bucket_notification" "medallion_notification" {
-  bucket = aws_s3_bucket.data_lake.id
+  bucket     = aws_s3_bucket.data_lake.id
   depends_on = [var.lambda_permission_id]
 
   lambda_function {

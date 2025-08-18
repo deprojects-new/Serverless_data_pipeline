@@ -4,185 +4,111 @@ resource "aws_sfn_state_machine" "data_pipeline" {
   role_arn = var.step_functions_role_arn
 
   definition = jsonencode({
-    Comment = "Serverless Data Pipeline Orchestration"
+    Comment = "Serverless Data Pipeline Orchestration "
     StartAt = "SetExecutionContext"
-    
+
     States = {
-      # Step 1: Start Bronze to Silver Job
-      # execution context for Glue jobs
+      # Step 1: Set execution context for Glue jobs
       SetExecutionContext = {
         Type = "Pass"
         Parameters = {
-          execution_name = "$$.Execution.Name"
-          trigger_time = "$.trigger_time"
-          bucket = "$.bucket"
-          key = "$.key"
-          size = "$.size"
-          data_layer = "$.data_layer"
-          environment = "$.environment"
+          execution_name       = "$$.Execution.Name"
+          execution_start_time = "$$.Execution.StartTime"
+          trigger_time         = "$.trigger_time"
+          bucket               = "$.bucket"
+          key                  = "$.key"
+          size                 = "$.size"
+          data_layer           = "$.data_layer"
+          environment          = "$.environment"
+          correlation_id       = "$$.Execution.Name"
+          data_volume_mb       = "States.MathDivide($.size, 1048576)"
         }
         Next = "StartBronzeToSilverJob"
       }
 
+      # Step 2: Start Bronze to Silver Job
       StartBronzeToSilverJob = {
         Type     = "Task"
         Resource = "arn:aws:states:::aws-sdk:glue:startJobRun"
         Parameters = {
           JobName = var.bronze_to_silver_job_name
-          Arguments = {
-            "--execution-id" = "$.execution_name"
-            "--pipeline-run" = "$.trigger_time"
-            "--key" = "$.key"
-          }
         }
         ResultPath = "$.BronzeToSilverResult"
         Retry = [
           {
-            ErrorEquals = ["States.TaskFailed"]
+            ErrorEquals     = ["States.TaskFailed"]
             IntervalSeconds = 60
-            MaxAttempts = 2
-            BackoffRate = 2.0
+            MaxAttempts     = 3
+            BackoffRate     = 2.0
           }
         ]
         Catch = [
           {
             ErrorEquals = ["States.ALL"]
-            Next = "BronzeToSilverFailed"
+            Next        = "BronzeToSilverFailed"
           }
         ]
-        Next = "InitializeRetryCount"
+        Next = "WaitForJobCompletion"
       }
 
-      # retry count
-      InitializeRetryCount = {
-        Type = "Pass"
-        Parameters = {
-          RetryCount = 0
-        }
-        Next = "WaitForBronzeToSilver"
+      # Step 3: Wait for Bronze→Silver job completion
+      WaitForJobCompletion = {
+        Type    = "Wait"
+        Seconds = 180 # 3 minutes
+        Next    = "StartCrawlerBackground"
       }
 
-      # Wait for Bronze to Silver Job to complete
-      WaitForBronzeToSilver = {
-        Type = "Wait"
-        Seconds = 30  # Wait 30 seconds
-        Next = "StartSilverCrawler"
-      }
-
-      # Step 2: Start Silver Crawler (after Bronze→Silver completes)
-      StartSilverCrawler = {
+      # Step 4: Start Silver Crawler in Background (Non-Blocking)
+      StartCrawlerBackground = {
         Type     = "Task"
         Resource = "arn:aws:states:::aws-sdk:glue:startCrawler"
         Parameters = {
           Name = var.silver_crawler_name
         }
-        Retry = [
-          {
-            ErrorEquals = ["States.TaskFailed"]
-            IntervalSeconds = 30
-            MaxAttempts = 2
-            BackoffRate = 2.0
-          }
-        ]
+        ResultPath = "$.CrawlerResult"
         Catch = [
           {
             ErrorEquals = ["States.ALL"]
-            Next = "SilverCrawlerFailed"
+            Next        = "LogCrawlerError"
           }
         ]
-        Next = "WaitForSilverCrawler"
+        Next = "StartSilverToGoldJob"
       }
 
-      # Wait for Silver Crawler to complete
-      WaitForSilverCrawler = {
-        Type = "Wait"
-        Seconds = 60  # Initial wait for crawler to start 
-        Next = "CheckSilverCrawlerStatus"
-      }
-
-      # Check if Silver Crawler has completed
-      CheckSilverCrawlerStatus = {
-        Type = "Task"
-        Resource = "arn:aws:states:::aws-sdk:glue:getCrawler"
-        Parameters = {
-          Name = var.silver_crawler_name
-        }
-        ResultPath = "$.CrawlerStatus"
-        Next = "LogCrawlerStatus"
-        Catch = [
-          {
-            ErrorEquals = ["States.ALL"]
-            Next = "SilverCrawlerFailed"
-          }
-        ]
-      }
-
-      # Log crawler status
-      LogCrawlerStatus = {
+      # Step 5: Log Crawler Error
+      LogCrawlerError = {
         Type = "Pass"
         Parameters = {
-          Message = "Checking crawler status",
-          CrawlerState = "$.CrawlerStatus.Crawler.State",
-          RetryCount = "$.RetryCount",
-          Timestamp = "$$.State.EnteredTime"
+          message             = "Crawler start failed but continuing pipeline execution",
+          crawler_error       = "$$.Error",
+          crawler_error_cause = "$$.Cause",
+          timestamp           = "$$.State.EnteredTime",
+          correlation_id      = "$.correlation_id"
         }
-        ResultPath = "$.LogInfo"
-        Next = "SilverCrawlerComplete?"
+        ResultPath = "$.CrawlerError"
+        Next       = "StartSilverToGoldJob"
       }
 
-      # Decision: Is crawler complete
-      "SilverCrawlerComplete?" = {
-        Type = "Choice"
-        Choices = [
-          {
-            Variable = "$.CrawlerStatus.Crawler.State"
-            StringEquals = "READY"
-            Next = "StartSilverToGoldJob"
-          },
-          {
-            Variable = "$.RetryCount"
-            NumericGreaterThan = 5
-            Next = "SilverCrawlerFailed"
-          }
-        ]
-        Default = "WaitMoreForCrawler"
-      }
-
-      # Wait more if crawler is still running
-      WaitMoreForCrawler = {
-        Type = "Wait"
-        Seconds = 120  # Wait 2 minutes before checking again
-        Next = "IncrementRetryCount"
-      }
-
-      # Increment retry count
-      IncrementRetryCount = {
-        Type = "Pass"
-        Parameters = {
-          RetryCount = "States.MathAdd($.RetryCount, 1)"
-        }
-        Next = "CheckSilverCrawlerStatus"
-      }
-
-      # Step 3: Start Silver to Gold Job
+      # Step 6: Start Silver to Gold Job
       StartSilverToGoldJob = {
         Type     = "Task"
         Resource = "arn:aws:states:::aws-sdk:glue:startJobRun"
         Parameters = {
           JobName = var.silver_to_gold_job_name
         }
+        ResultPath = "$.SilverToGoldResult"
         Retry = [
           {
-            ErrorEquals = ["States.TaskFailed"]
+            ErrorEquals     = ["States.TaskFailed"]
             IntervalSeconds = 60
-            MaxAttempts = 2
-            BackoffRate = 2.0
+            MaxAttempts     = 3
+            BackoffRate     = 2.0
           }
         ]
         Catch = [
           {
             ErrorEquals = ["States.ALL"]
-            Next = "SilverToGoldFailed"
+            Next        = "SilverToGoldFailed"
           }
         ]
         Next = "PipelineSuccess"
@@ -190,32 +116,24 @@ resource "aws_sfn_state_machine" "data_pipeline" {
 
       # Success State
       PipelineSuccess = {
-        Type = "Succeed"
-        Comment = "Data pipeline completed successfully"
+        Type    = "Succeed"
+        Comment = "Data pipeline completed successfully with background crawler processing"
       }
 
       # Error States
-      SilverCrawlerFailed = {
-        Type = "Fail"
-        Error = "SilverCrawlerExecutionFailed"
-        Cause = "Silver crawler execution failed after retries"
-      }
-
       BronzeToSilverFailed = {
-        Type = "Fail"
+        Type  = "Fail"
         Error = "BronzeToSilverJobFailed"
         Cause = "Bronze to Silver job execution failed after retries"
       }
 
       SilverToGoldFailed = {
-        Type = "Fail"
+        Type  = "Fail"
         Error = "SilverToGoldJobFailed"
         Cause = "Silver to Gold job execution failed after retries"
       }
     }
   })
-
-  
 
   tags = {
     Name        = "${var.project}-data-pipeline"
@@ -228,7 +146,7 @@ resource "aws_sfn_state_machine" "data_pipeline" {
 # Professional Step Functions Log Group
 resource "aws_cloudwatch_log_group" "step_functions_log_group" {
   name              = "/aws/stepfunctions/assignment5-stepfunction"
-  retention_in_days = 0 
+  retention_in_days = 0
 
   tags = {
     Name        = "assignment5-stepfunction-logs"
@@ -249,9 +167,9 @@ resource "aws_cloudwatch_metric_alarm" "step_functions_execution_duration" {
   namespace           = "AWS/States"
   period              = 300
   statistic           = "Average"
-  threshold           = 3600000  
-  alarm_description   = "This metric monitors Step Functions execution duration"
-  alarm_actions       = []  
+  threshold           = 1800000 # 30 minutes (30 * 60 * 1000 ms)
+  alarm_description   = "Alarm when Step Functions execution takes longer than 30 minutes"
+  alarm_actions       = []
 
   dimensions = {
     StateMachineArn = aws_sfn_state_machine.data_pipeline.arn
@@ -264,8 +182,6 @@ resource "aws_cloudwatch_metric_alarm" "step_functions_execution_duration" {
   }
 }
 
-
-
 # CloudWatch Alarm for Step Functions Execution Failures
 resource "aws_cloudwatch_metric_alarm" "step_functions_execution_failure" {
   alarm_name          = "${var.project}-step-functions-execution-failure"
@@ -277,7 +193,7 @@ resource "aws_cloudwatch_metric_alarm" "step_functions_execution_failure" {
   statistic           = "Sum"
   threshold           = 0
   alarm_description   = "Alarm when Step Functions execution fails"
-  alarm_actions       = []  # Add SNS topic ARN here for notifications
+  alarm_actions       = []
 
   dimensions = {
     StateMachineArn = aws_sfn_state_machine.data_pipeline.arn
@@ -290,28 +206,32 @@ resource "aws_cloudwatch_metric_alarm" "step_functions_execution_failure" {
   }
 }
 
-# CloudWatch Alarm for Step Functions Execution Timeouts
-resource "aws_cloudwatch_metric_alarm" "step_functions_execution_timeout" {
-  alarm_name          = "${var.project}-step-functions-execution-timeout"
+
+# CloudWatch Alarm for Crawler Failures (Separate Monitoring)
+resource "aws_cloudwatch_metric_alarm" "crawler_failure" {
+  alarm_name          = "${var.project}-silver-crawler-failure"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
-  metric_name         = "ExecutionTime"
-  namespace           = "AWS/States"
+  metric_name         = "CrawlerSuccessRate"
+  namespace           = "AWS/Glue"
   period              = 300
   statistic           = "Average"
-  threshold           = 1800000  # 30 minutes (30 * 60 * 1000 ms)
-  alarm_description   = "Alarm when Step Functions execution takes too long"
-  alarm_actions       = []  # Add SNS topic ARN here for notifications
+  threshold           = 80 # Alert if success rate drops below 80%
+  alarm_description   = "Alarm when Silver crawler success rate drops below 80%"
+  alarm_actions       = []
 
   dimensions = {
-    StateMachineArn = aws_sfn_state_machine.data_pipeline.arn
+    CrawlerName = var.silver_crawler_name
   }
 
   tags = {
-    Name        = "${var.project}-step-functions-timeout-alarm"
+    Name        = "${var.project}-silver-crawler-failure-alarm"
     Environment = var.environment
     Project     = var.project
+    Layer       = "medallion-silver-crawler"
   }
 }
+
+
 
 
