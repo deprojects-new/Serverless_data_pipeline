@@ -20,7 +20,7 @@ The architecture is fully serverless, event-driven, and designed for production 
 
 ```mermaid
 graph LR
-    A[Web Application Logs<br/>(JSON Format- multi part upload)]
+    A[Web Application Logs<br/>JSON Format - multi part upload]
     B[S3 Bronze Layer<br/>(Raw Data)]
     C[S3 Silver Layer<br/>(Cleaned & Validated)]
     D[S3 Gold Layer<br/>(Business Metrics)]
