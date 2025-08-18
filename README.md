@@ -20,23 +20,16 @@ The architecture is fully serverless, event-driven, and designed for production 
 
 ```mermaid
 graph LR
-    %% Data Sources
-    A[Web Application Logs<br/>(JSON Format)]
-    
-    %% S3 Data Lake Layers
+    A[Web Application Logs<br/>(JSON Format- multi part upload)]
     B[S3 Bronze Layer<br/>(Raw Data)]
     C[S3 Silver Layer<br/>(Cleaned & Validated)]
     D[S3 Gold Layer<br/>(Business Metrics)]
     
-    %% AWS Services
     E[Lambda Function<br/>(Event Trigger)]
     F[Step Functions<br/>(Orchestration)]
     G[Glue ETL Jobs<br/>(Data Processing)]
-    
-    %% Monitoring
     H[CloudWatch<br/>(Monitoring & Alerts)]
     
-    %% Data Flow
     A --> B
     B --> E
     E --> F
@@ -45,12 +38,10 @@ graph LR
     C --> G
     G --> D
     
-    %% Monitoring Connections
     E -.-> H
     F -.-> H
     G -.-> H
     
-    %% Styling
     classDef dataSource fill:#fff8e1,stroke:#f57f17,stroke-width:2px
     classDef s3Layer fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef awsService fill:#fff3e0,stroke:#e65100,stroke-width:2px
@@ -143,7 +134,6 @@ Serverless_data_pipeline/
 │           ├── variables.tf                # Step Functions module's input variables
 │           └── outputs.tf                  # Step Functions module's output values
 ├── venv/                                   # Python virtual environment (local development)
-├── LAMBDA_IMPLEMENTATION_SUMMARY.md        # Summary of Lambda function implementation details
 └── README.md                               # This project documentation and overview
 ```
 
