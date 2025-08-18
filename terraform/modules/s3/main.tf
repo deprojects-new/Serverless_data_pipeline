@@ -46,48 +46,40 @@ resource "aws_s3_bucket_lifecycle_configuration" "data_lake_lifecycle" {
   bucket = aws_s3_bucket.data_lake.id
 
   rule {
-    id     = "raw_data_lifecycle"
+    id     = "bronze_data_lifecycle"
     status = "Enabled"
-
-    filter {
-      prefix = "raw/"
-    }
-
+    filter { prefix = "bronze/" }
+    
     transition {
       days          = 30
       storage_class = "STANDARD_IA"
     }
-
     transition {
-      days          = 90
+      days          = 90  
       storage_class = "GLACIER"
-    }
-
-    expiration {
-      days = var.data_lake_lifecycle_days
     }
   }
 
   rule {
-    id     = "processed_data_lifecycle"
+    id     = "silver_data_lifecycle"
     status = "Enabled"
-
-    filter {
-      prefix = "processed/"
-    }
-
+    filter { prefix = "silver/" }
+    
     transition {
       days          = 60
-      storage_class = "STANDARD_IA"
+      storage_class = "STANDARD_IA" 
     }
+  }
 
+  rule {
+    id     = "gold_data_lifecycle" 
+    status = "Enabled"
+    filter { prefix = "gold/" }
+    
+    # Keep gold data in standard (frequently accessed)
     transition {
       days          = 180
-      storage_class = "GLACIER"
-    }
-
-    expiration {
-      days = var.data_lake_lifecycle_days * 2  # Keep processed data longer
+      storage_class = "STANDARD_IA"
     }
   }
 
@@ -120,16 +112,23 @@ resource "aws_s3_bucket_lifecycle_configuration" "data_lake_lifecycle" {
   }
 }
 
+
 # Create folder structure
-resource "aws_s3_object" "raw_folder" {
+resource "aws_s3_object" "bronze_folder" {
   bucket = aws_s3_bucket.data_lake.id
-  key    = "raw/"
+  key    = "bronze/"
   source = "/dev/null"
 }
 
-resource "aws_s3_object" "processed_folder" {
+resource "aws_s3_object" "silver_folder" {
   bucket = aws_s3_bucket.data_lake.id
-  key    = "processed/"
+  key    = "silver/"
+  source = "/dev/null"
+}
+
+resource "aws_s3_object" "gold_folder" {
+  bucket = aws_s3_bucket.data_lake.id
+  key    = "gold/"
   source = "/dev/null"
 }
 
@@ -139,34 +138,28 @@ resource "aws_s3_object" "glue_scripts_folder" {
   source = "/dev/null"
 }
 
-
-resource "aws_s3_object" "archive_folder" {
-  bucket = aws_s3_bucket.data_lake.id
-  key    = "archive/"
-  source = "/dev/null"
-}
-
 resource "aws_s3_object" "logs_folder" {
   bucket = aws_s3_bucket.data_lake.id
   key    = "logs/"
   source = "/dev/null"
 }
 
-resource "aws_s3_object" "invalid_folder" {
+
+resource "aws_s3_object" "athena_results_folder" {
   bucket = aws_s3_bucket.data_lake.id
-  key    = "invalid/"
+  key    = "athena-results/"
   source = "/dev/null"
 }
 
-# S3 bucket notification to trigger Lambda when files are uploaded to raw/
-resource "aws_s3_bucket_notification" "data_lake_notification" {
+# S3 notifications - triggering on bronze
+resource "aws_s3_bucket_notification" "medallion_notification" {
   bucket = aws_s3_bucket.data_lake.id
   depends_on = [var.lambda_permission_id]
 
   lambda_function {
     lambda_function_arn = var.lambda_function_arn
-    events              = ["s3:ObjectCreated:*"]
-    filter_prefix       = "raw/"
+    events              = ["s3:ObjectCreated:CompleteMultipartUpload", "s3:ObjectCreated:Put"]
+    filter_prefix       = "bronze/"
     filter_suffix       = ".json"
   }
 }
