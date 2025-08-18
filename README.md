@@ -16,6 +16,147 @@ The pipeline implements a **Medallion Architecture** with three distinct data la
 
 The architecture is fully serverless, event-driven, and designed for production scalability with comprehensive monitoring and error handling.
 
+## Architectural Diagram
+
+```mermaid
+graph TB
+    %% External Data Sources
+    subgraph "Data Sources"
+        A[Web Application Logs]
+        [Sample Data Generator]
+    end
+
+    %% S3 Data Lake
+    subgraph "S3 Data Lake - assignment5-data-lake"
+        subgraph "Bronze Layer"
+            C[bronze/raw_logs.json]
+        end
+        
+        subgraph "Silver Layer"
+            D[silver/year=2024/month=01/day=15/]
+            E[silver/year=2024/month=01/day=16/]
+        end
+        
+        subgraph "Gold Layer"
+            F[gold/daily_metrics/]
+            G[gold/session_metrics/]
+        end
+        
+        subgraph "Supporting"
+            H[glue_scripts/]
+            
+        end
+    end
+
+    %% AWS Services
+    subgraph "AWS Lambda"
+        J[Lambda Function<br/>S3 Event Trigger]
+    end
+
+    subgraph "AWS Step Functions"
+        K[State Machine<br/>Pipeline Orchestration]
+        K1[SetExecutionContext]
+        K2[StartBronzeToSilverJob]
+        K3[WaitForJobCompletion]
+        K4[StartCrawlerBackground]
+        K5[StartSilverToGoldJob]
+    end
+
+    subgraph "AWS Glue"
+        L[Bronze→Silver ETL Job<br/>Data Cleaning & Validation]
+        M[Silver→Gold ETL Job<br/>Business Aggregations]
+        N[Silver Crawler<br/>Schema Discovery]
+        O[Glue Data Catalog<br/>Metadata Management]
+    end
+
+    subgraph "AWS IAM"
+        P[Lambda Execution Role]
+        Q[Glue Execution Role]
+        R[Step Functions Role]
+        S[Data Engineers Group]
+    end
+
+    subgraph "Amazon CloudWatch"
+        T[Logs]
+        U[Metrics]
+        V[Alarms]
+    end
+
+    %% Data Flow Connections
+    A --> C
+    B --> C
+    C --> J
+    J --> K
+    K --> K1
+    K1 --> K2
+    K2 --> L
+    L --> D
+    K2 --> K3
+    K3 --> K4
+    K4 --> N
+    N --> O
+    K4 --> K5
+    K5 --> M
+    D --> M
+    M --> F
+    M --> G
+
+    %% IAM Connections
+    J -.-> P
+    L -.-> Q
+    M -.-> Q
+    N -.-> Q
+    K -.-> R
+    S -.-> C
+    S -.-> D
+    S -.-> F
+
+    %% Monitoring Connections
+    J -.-> T
+    L -.-> T
+    M -.-> T
+    K -.-> T
+    J -.-> U
+    L -.-> U
+    M -.-> U
+    K -.-> U
+    U -.-> V
+
+    %% Styling
+    classDef s3Layer fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef awsService fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef iamService fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef monitoringService fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef dataSource fill:#fff8e1,stroke:#f57f17,stroke-width:2px
+
+    class C,D,E,F,G,H,I s3Layer
+    class J,K,L,M,N,O awsService
+    class P,Q,R,S iamService
+    class T,U,V monitoringService
+    class A,B dataSource
+```
+
+### Architecture Components
+
+**Data Flow**:
+1. **Ingestion**: Web logs or sample data uploaded to S3 Bronze layer
+2. **Trigger**: S3 event triggers Lambda function
+3. **Orchestration**: Step Functions coordinates the entire pipeline
+4. **ETL Processing**: Glue jobs transform data between layers
+5. **Schema Management**: Crawler updates Data Catalog metadata
+6. **Output**: Business-ready metrics in Gold layer
+
+**Service Integration**:
+- **Event-Driven**: S3 → Lambda → Step Functions → Glue
+- **Serverless**: All compute resources scale automatically
+- **Monitored**: CloudWatch provides comprehensive observability
+- **Secured**: IAM roles enforce least-privilege access
+
+**Data Layers**:
+- **Bronze**: Raw, unprocessed data (JSON format)
+- **Silver**: Cleaned, validated, partitioned data (Parquet format)
+- **Gold**: Business aggregations and KPIs (Parquet format)
+
 ## AWS Services and Their Roles
 
 ### Core Services
