@@ -199,7 +199,7 @@ graph TB
 ## Data Flow and Processing Logic
 
 ### 1. Data Ingestion (Bronze Layer)
-**Trigger**: S3 object creation in `s3://bucket/bronze/`
+**Trigger**: S3 object creation in `s3://assignment5-data-lake/bronze/`
 **Process**: Lambda function receives S3 event and triggers Step Functions execution
 **Data Format**: Raw JSON web logs with fields like event_id, event_ts, session_id, method, path, status, etc.
 
@@ -211,7 +211,7 @@ graph TB
 - **Data Quality Checks**: Validates HTTP status codes, methods, and performance metrics
 - **PII Removal**: Masks or removes sensitive client information
 - **Partitioning**: Organizes data by year/month/day for efficient querying
-- **Output**: Clean Parquet files in `s3://bucket/silver/`
+- **Output**: Clean Parquet files in `s3://assignment5-data-lake/silver/`
 
 
 
@@ -222,7 +222,7 @@ graph TB
 - **Business Aggregations**: Calculates daily metrics and session analytics
 - **KPI Generation**: Computes error rates, success rates, and performance indicators
 - **Deduplication**: Prevents duplicate records in fallback scenarios
-- **Output**: Business-ready metrics in `s3://bucket/gold/`
+- **Output**: Business-ready metrics in `s3://assignment5-data-lake/gold/`
 
 
 
@@ -273,7 +273,7 @@ graph TB
 
 **Lambda Execution Role**
 - Permissions: S3 read access, Step Functions execution, CloudWatch logging
-- Scope: Limited to specific bucket and state machine
+- Scope: Limited to assignment5-data-lake bucket and state machine
 
 **Glue Execution Role**
 - Permissions: S3 read/write access, Glue Data Catalog operations, CloudWatch logging
@@ -290,7 +290,7 @@ graph TB
 ### Security Features
 
 - **Encryption**: AES256 server-side encryption for all data at rest
-- **Access Control**: Public access blocking on S3 bucket
+- **Access Control**: Public access blocking on assignment5-data-lake bucket
 - **Audit Trail**: Comprehensive CloudWatch logging for all operations
 - **Least Privilege**: Minimal required permissions for each service
 
