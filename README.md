@@ -20,15 +20,14 @@ The architecture is fully serverless, event-driven, and designed for production 
 
 ```mermaid
 graph LR
-    A[Web Application Logs<br/>JSON Format - multi part upload]
-    B[S3 Bronze Layer<br/>(Raw Data)]
-    C[S3 Silver Layer<br/>(Cleaned & Validated)]
-    D[S3 Gold Layer<br/>(Business Metrics)]
-    
-    E[Lambda Function<br/>(Event Trigger)]
-    F[Step Functions<br/>(Orchestration)]
-    G[Glue ETL Jobs<br/>(Data Processing)]
-    H[CloudWatch<br/>(Monitoring & Alerts)]
+    A[Web Application Logs]
+    B[S3 Bronze Layer]
+    C[S3 Silver Layer]
+    D[S3 Gold Layer]
+    E[Lambda Function]
+    F[Step Functions]
+    G[Glue ETL Jobs]
+    H[CloudWatch]
     
     A --> B
     B --> E
