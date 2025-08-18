@@ -46,7 +46,7 @@ resource "aws_glue_crawler" "silver_crawler" {
   })
   
   # Schedule - to keep the metadata updated
-  schedule = "cron(0 */6 * * ? *)"  # Every 6 hours
+  schedule = "cron(0 */4 * * ? *)" 
   
   tags = {
     Name  = "${var.project}-silver-crawler"
@@ -193,8 +193,7 @@ resource "aws_cloudwatch_log_group" "bronze_silver_log_group" {
 
 resource "aws_cloudwatch_log_group" "silver_gold_log_group" {
   name              = "/aws-glue/jobs/assignment5-silver-gold"
-  retention_in_days = 0  # Never expire - matches AWS Glue default behavior
-
+  retention_in_days = 0  
   tags = {
     Name        = "assignment5-silver-gold-logs"
     Environment = var.environment
@@ -205,79 +204,11 @@ resource "aws_cloudwatch_log_group" "silver_gold_log_group" {
 }
 
 # CloudWatch Alarms for Glue Jobs and Crawler
-resource "aws_cloudwatch_metric_alarm" "bronze_to_silver_job_failure" {
-  alarm_name          = "${var.project}-bronze-to-silver-job-failure"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 1
-  metric_name         = "glue.driver.aggregate.bytesRead"
-  namespace           = "AWS/Glue"
-  period              = 300
-  statistic           = "Sum"
-  threshold           = 0
-  alarm_description   = "Alarm when Bronze to Silver job fails or has issues"
-  alarm_actions       = []  # Will add SNS topic later
-  
-  dimensions = {
-    JobName = aws_glue_job.bronze_to_silver_job.name
-    Type    = "driver"
-  }
+ 
 
-  tags = {
-    Name        = "${var.project}-bronze-silver-job-failure-alarm"
-    Environment = var.environment
-    Project     = var.project
-    Layer       = "medallion-bronze-silver"
-  }
-}
+ 
 
-resource "aws_cloudwatch_metric_alarm" "silver_to_gold_job_failure" {
-  alarm_name          = "${var.project}-silver-to-gold-job-failure"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 1
-  metric_name         = "glue.driver.aggregate.bytesRead"
-  namespace           = "AWS/Glue"
-  period              = 300
-  statistic           = "Sum"
-  threshold           = 0
-  alarm_description   = "Alarm when Silver to Gold job fails or has issues"
-  alarm_actions       = []  # Will add SNS topic later
-  
-  dimensions = {
-    JobName = aws_glue_job.silver_to_gold_job.name
-    Type    = "driver"
-  }
 
-  tags = {
-    Name        = "${var.project}-silver-gold-job-failure-alarm"
-    Environment = var.environment
-    Project     = var.project
-    Layer       = "medallion-silver-gold"
-  }
-}
-
-resource "aws_cloudwatch_metric_alarm" "silver_crawler_failure" {
-  alarm_name          = "${var.project}-silver-crawler-failure"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 1
-  metric_name         = "glue.crawler.running"
-  namespace           = "AWS/Glue"
-  period              = 300
-  statistic           = "Average"
-  threshold           = 0
-  alarm_description   = "Alarm when Silver crawler fails or gets stuck"
-  alarm_actions       = []  # Will add SNS topic later
-  
-  dimensions = {
-    CrawlerName = aws_glue_crawler.silver_crawler.name
-  }
-
-  tags = {
-    Name        = "${var.project}-silver-crawler-failure-alarm"
-    Environment = var.environment
-    Project     = var.project
-    Layer       = "medallion-silver-crawler"
-  }
-}
 
 # Data Quality Alarms
 resource "aws_cloudwatch_metric_alarm" "data_quality_bronze_silver" {
@@ -290,7 +221,7 @@ resource "aws_cloudwatch_metric_alarm" "data_quality_bronze_silver" {
   statistic           = "Sum"
   threshold           = 100  # Alert if less than 100 records processed
   alarm_description   = "Alarm when Bronze to Silver job processes very few records (potential data issue)"
-  alarm_actions       = []  # Will add SNS topic later
+  alarm_actions       = [] 
   
   dimensions = {
     JobName = aws_glue_job.bronze_to_silver_job.name
@@ -315,7 +246,7 @@ resource "aws_cloudwatch_metric_alarm" "data_quality_silver_gold" {
   statistic           = "Sum"
   threshold           = 50   # Alert if less than 50 records processed
   alarm_description   = "Alarm when Silver to Gold job processes very few records (potential data issue)"
-  alarm_actions       = []  # Will add SNS topic later
+  alarm_actions       = []  
   
   dimensions = {
     JobName = aws_glue_job.silver_to_gold_job.name
