@@ -1,105 +1,142 @@
-name: Terraform Infrastructure - Serverless Data Pipeline
+name: terraform
 
 on:
-  push:
-    branches: [main, 'feature/**']
-    paths: ['terraform/**']
   pull_request:
+    paths: ["terraform/**"]
+  push:
     branches: [main]
-    paths: ['terraform/**']
-  workflow_dispatch:
+    paths: ["terraform/**"]
 
-env:
-  AWS_REGION: us-east-2
-  TERRAFORM_VERSION: '1.5.0'
-  PROJECT_NAME: serverless-data-pipeline
+permissions:
+  id-token: write     
+  contents: read
 
 jobs:
-  terraform-validate:
+  plan:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    concurrency:
+      group: tf-plan
+      cancel-in-progress: true
+    defaults:
+      run:
+        working-directory: terraform
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-      
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+          terraform_version: 1.8.5
+
+      - name: Configure AWS (plan role via OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_KEY }}
-          aws-secret-access-key: ${{ secrets.AWS_KEY2 }}
-          aws-region: ${{ secrets.AWS_REGION }}
-      
-      - name: Terraform Format
-        run: terraform fmt -recursive
-        working-directory: ./terraform
-      
-      - name: Terraform Init
-        run: terraform init
-        working-directory: ./terraform
-      
-      - name: Terraform Validate
-        run: terraform validate
-        working-directory: ./terraform
-      
-      - name: Terraform Plan
+          role-to-assume: arn:aws:iam::872515279539:role/gha-terraform-plan
+          aws-region: us-east-2
+
+      - name: Who am I (STS)
+        run: aws sts get-caller-identity
+
+      - name: Init
+        run: terraform init -reconfigure
+
+      - name: Format & Validate
         run: |
-          terraform plan -var-file=environments/dev.tfvars -out=tfplan
-          terraform show -no-color tfplan > plan_output.txt
-        working-directory: ./terraform
-      
-      
-  # terraform-deploy:
-  #   runs-on: ubuntu-latest
-    # environment: production
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v3
-  #     
-  #     - name: Setup Terraform
-  #       uses: hashicorp/setup-terraform@v2
-  #       with:
-  #         terraform_version: ${{ env.TERRAFORM_VERSION }}
-  #     
-  #     - name: Configure AWS credentials
-  #       uses: aws-actions/configure-aws-credentials@v2
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_KEY }}
-  #         aws-secret-access-key: ${{ secrets.AWS_KEY2 }}
-  #         aws-region: ${{ secrets.AWS_REGION }}
-  #     
-  #     - name: Terraform Init
-  #       run: terraform init
-  #       working-directory: ./terraform
-  #     
-  #     - name: Setup Terraform Workspace
-  #       run: |
-  #         terraform workspace new cicd || terraform workspace select cicd
-  #         echo "Using workspace: $(terraform workspace show)"
-  #       working-directory: ./terraform
-  #     
-  #     - name: Import Existing Resources
-  #       run: |
-  #         echo "Importing existing resources to Terraform state"
-  #         terraform import module.iam.aws_iam_group.data_engineers DataEngineers || echo "IAM group already imported or doesn't exist"
-  #         terraform import module.iam.aws_iam_policy.data_engineers_policy arn:aws:iam::997118486926:policy/DataEngineersLeastPrivilegePolicy || echo "IAM policy already imported or doesn't exist"
-  #         terraform import module.s3.aws_s3_bucket.raw_storage_bucket assignment5-raw-bucket || echo "S3 bucket already imported or doesn't exist"
-  #         echo "Import completed"
-  #       working-directory: ./terraform
-  #     
-  #     - name: Deploy Log Processing Infrastructure
-  #       run: |
-  #         echo "Deploying Serverless Log Processing Pipeline Infrastructure"
-  #         terraform apply -auto-approve -var-file="environments/prod.tfvars"
-  #         echo "Infrastructure deployment completed"
-  #       working-directory: ./terraform
-  #     
-  #     - name: Output Infrastructure Details
-  #       run: |
-  #         echo "Infrastructure Outputs:"
-  #         terraform output
-  #       working-directory: ./terraform
+          terraform fmt -check
+          terraform validate
+
+      - name: Plan (dev)
+        run: |
+          terraform workspace select dev || terraform workspace new dev
+          terraform plan -input=false -var-file=environments/dev.tfvars -out=dev.plan
+      - name: Upload dev plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: dev-plan
+          path: terraform/dev.plan
+
+      - name: Plan (prod)
+        run: |
+          terraform workspace select prod || terraform workspace new prod
+          terraform plan -input=false -var-file=environments/prod.tfvars -out=prod.plan
+      - name: Upload prod plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-plan
+          path: terraform/prod.plan
+
+  apply-dev:
+    if: github.ref == 'refs/heads/main'
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    concurrency:
+      group: tf-apply-dev
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+
+      - name: Configure AWS (apply role via OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::872515279539:role/gha-terraform-apply
+          aws-region: us-east-2
+
+      - name: Who am I (STS)
+        run: aws sts get-caller-identity
+
+      - name: Init
+        run: terraform init -reconfigure
+
+      - name: Apply (dev)
+        run: |
+          terraform workspace select dev || terraform workspace new dev
+          terraform apply -input=false -auto-approve -var-file=environments/dev.tfvars
+
+  apply-prod:
+    if: github.ref == 'refs/heads/main'
+    needs: apply-dev
+    runs-on: ubuntu-latest
+    timeout-minutes: 60     # runtime after approval
+    environment: prod       # requires approval in repo Settings → Environments
+    concurrency:
+      group: tf-apply-prod
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+
+      - name: Configure AWS (apply role via OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::872515279539:role/gha-terraform-apply
+          aws-region: us-east-2
+
+      - name: Who am I (STS)
+        run: aws sts get-caller-identity
+
+      - name: Init
+        run: terraform init -reconfigure
+
+      - name: Apply (prod)
+        run: |
+          terraform workspace select prod || terraform workspace new prod
+          terraform apply -input=false -auto-approve -var-file=environments/prod.tfvars
