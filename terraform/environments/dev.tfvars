@@ -17,8 +17,13 @@ data_lake_bucket_name = "sdp-dev-datalake-082898"
 project               = "serverless-data-pipeline"
 environment           = "dev"
 
+# Lifecycle Configuration
+data_lake_versioning     = true
+data_lake_lifecycle_days = 90  # Shorter retention for dev environment
+
 enable_lambda = false
 enable_glue   = false
 enable_iam    = false
 enable_sfn    = false
 
+enable_ci_bootstrap = false

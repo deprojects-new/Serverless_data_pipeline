@@ -50,11 +50,11 @@ resource "aws_s3_bucket_lifecycle_configuration" "data_lake_lifecycle" {
     filter { prefix = "bronze/" }
 
     transition {
-      days          = 30
+      days          = min(30, var.data_lake_lifecycle_days)
       storage_class = "STANDARD_IA"
     }
     transition {
-      days          = 90
+      days          = min(90, var.data_lake_lifecycle_days)
       storage_class = "GLACIER"
     }
   }
@@ -65,7 +65,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "data_lake_lifecycle" {
     filter { prefix = "silver/" }
 
     transition {
-      days          = 60
+      days          = min(60, var.data_lake_lifecycle_days)
       storage_class = "STANDARD_IA"
     }
   }
@@ -77,7 +77,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "data_lake_lifecycle" {
 
     # Keep gold data in standard (frequently accessed)
     transition {
-      days          = 180
+      days          = min(180, var.data_lake_lifecycle_days)
       storage_class = "STANDARD_IA"
     }
   }
@@ -105,7 +105,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "data_lake_lifecycle" {
 
     # Keep scripts indefinitely (no expiration)
     transition {
-      days          = 90
+      days          = min(90, var.data_lake_lifecycle_days)
       storage_class = "STANDARD_IA"
     }
   }

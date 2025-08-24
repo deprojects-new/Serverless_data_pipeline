@@ -81,5 +81,9 @@ variable "enable_sfn" {
   default = false
 }
 
-
+variable "enable_ci_bootstrap" {
+  description = "Create/own the GitHub OIDC provider and CI roles/policies"
+  type        = bool
+  default     = false
+}
 
