@@ -10,10 +10,15 @@ resource "aws_iam_openid_connect_provider" "github" {
 }
 
 locals {
-  sub_any_branch   = "repo:${var.github_owner}/${var.github_repo}:ref:refs/heads/*"
-  sub_main         = "repo:${var.github_owner}/${var.github_repo}:ref:refs/heads/main"
-  sub_env_prod     = "repo:${var.github_owner}/${var.github_repo}:environment:prod"
-  sub_pull_request = "repo:${var.github_owner}/${var.github_repo}:pull_request"
+
+  github_owner = var.github_owner
+  github_repo  = var.github_repo
+
+  sub_any_branch     = "repo:${var.github_owner}/${var.github_repo}:ref:refs/heads/*"
+  sub_main           = "repo:${var.github_owner}/${var.github_repo}:ref:refs/heads/main"
+  sub_pull_request   = "repo:${var.github_owner}/${var.github_repo}:pull_request"
+  sub_env_production = "repo:${local.github_owner}/${local.github_repo}:environment:production"
+
 
 
 }
@@ -42,7 +47,7 @@ data "aws_iam_policy_document" "assume_plan" {
       values = [
         local.sub_any_branch,
         local.sub_pull_request,
-        # local.sub_tags,  # uncomment if needed
+        # local.sub_tags,  #  if needed
       ]
     }
   }
@@ -51,7 +56,7 @@ data "aws_iam_policy_document" "assume_plan" {
 
 
 
-# Apply role: ONLY main branch OR a job using the GitHub Environment 'prod'
+# Apply role: ONLY main branch OR a job using the GitHub Environment 'production'
 data "aws_iam_policy_document" "assume_apply" {
   statement {
     effect  = "Allow"
@@ -71,7 +76,7 @@ data "aws_iam_policy_document" "assume_apply" {
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = [local.sub_main, local.sub_env_prod]
+      values   = [local.sub_main, local.sub_env_production]
     }
   }
 }
