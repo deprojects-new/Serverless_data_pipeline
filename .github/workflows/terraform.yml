@@ -8,14 +8,14 @@ on:
     paths: ["terraform/**"]
 
 permissions:
-  id-token: write     
+  id-token: write
   contents: read
 
 jobs:
   plan:
     runs-on: ubuntu-latest
     concurrency:
-      group: tf-plan
+      group: tf-plan-${{ github.ref }}
       cancel-in-progress: true
     defaults:
       run:
@@ -28,6 +28,7 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.8.5
+          terraform_wrapper: false
 
       - name: Configure AWS (plan role via OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -39,76 +40,43 @@ jobs:
         run: aws sts get-caller-identity
 
       - name: Init
-        run: terraform init -reconfigure
+        run: terraform init -input=false -reconfigure
 
       - name: Format & Validate
         run: |
           terraform fmt -check
           terraform validate
 
+      - name: Select/Create dev workspace
+        run: terraform workspace select -or-create=true dev
+
       - name: Plan (dev)
-        run: |
-          terraform workspace select dev || terraform workspace new dev
-          terraform plan -input=false -var-file=environments/dev.tfvars -out=dev.plan
+        run: terraform plan -input=false -var-file=environments/dev.tfvars -out=tfplan-dev
+
       - name: Upload dev plan
         uses: actions/upload-artifact@v4
         with:
-          name: dev-plan
-          path: terraform/dev.plan
+          name: tfplan-dev
+          path: terraform/tfplan-dev
+
+      - name: Select/Create prod workspace
+        run: terraform workspace select -or-create=true prod
 
       - name: Plan (prod)
-        run: |
-          terraform workspace select prod || terraform workspace new prod
-          terraform plan -input=false -var-file=environments/prod.tfvars -out=prod.plan
+        run: terraform plan -input=false -var-file=environments/prod.tfvars -out=tfplan-prod
+
       - name: Upload prod plan
         uses: actions/upload-artifact@v4
         with:
-          name: prod-plan
-          path: terraform/prod.plan
+          name: tfplan-prod
+          path: terraform/tfplan-prod
 
-  apply-dev:
+  apply-prod:
     if: github.ref == 'refs/heads/main'
     needs: plan
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    concurrency:
-      group: tf-apply-dev
-      cancel-in-progress: false
-    defaults:
-      run:
-        working-directory: terraform
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.8.5
-
-      - name: Configure AWS (apply role via OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::872515279539:role/gha-terraform-apply
-          aws-region: us-east-2
-
-      - name: Who am I (STS)
-        run: aws sts get-caller-identity
-
-      - name: Init
-        run: terraform init -reconfigure
-
-      - name: Apply (dev)
-        run: |
-          terraform workspace select dev || terraform workspace new dev
-          terraform apply -input=false -auto-approve -var-file=environments/dev.tfvars
-
-  apply-prod:
-    if: github.ref == 'refs/heads/main'
-    needs: apply-dev
-    runs-on: ubuntu-latest
-    timeout-minutes: 60     # runtime after approval
-    environment: prod       # requires approval in repo Settings → Environments
+    environment: production   
     concurrency:
       group: tf-apply-prod
       cancel-in-progress: false
@@ -123,6 +91,7 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.8.5
+          terraform_wrapper: false
 
       - name: Configure AWS (apply role via OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -134,9 +103,16 @@ jobs:
         run: aws sts get-caller-identity
 
       - name: Init
-        run: terraform init -reconfigure
+        run: terraform init -input=false -reconfigure
 
-      - name: Apply (prod)
-        run: |
-          terraform workspace select prod || terraform workspace new prod
-          terraform apply -input=false -auto-approve -var-file=environments/prod.tfvars
+      - name: Select/Create prod workspace
+        run: terraform workspace select -or-create=true prod
+
+      - name: Download prod plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-prod
+          path: terraform
+
+      - name: Apply (prod) — requires manual approval on this job
+        run: terraform apply -input=false -auto-approve tfplan-prod
