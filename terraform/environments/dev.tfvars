@@ -16,3 +16,8 @@ github_repo     = "Serverless_data_pipeline"
 data_lake_bucket_name = "sdp-dev-datalake"
 project               = "serverless-data-pipeline"
 environment           = "dev"
+
+enable_lambda = false
+enable_glue   = false
+enable_iam    = false
+enable_sfn    = false
