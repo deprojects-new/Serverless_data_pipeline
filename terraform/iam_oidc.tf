@@ -125,7 +125,8 @@ data "aws_iam_policy_document" "tf_apply" {
     effect = "Allow"
     actions = [
       "s3:GetAccelerateConfiguration", "s3:CreateBucket", "s3:PutBucket*", "s3:DeleteBucket", "s3:GetBucket*", "s3:ListBucket",
-      "s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucketMultipartUploads", "s3:AbortMultipartUpload"
+      "s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucketMultipartUploads", "s3:AbortMultipartUpload",
+      "s3:GetLifecycleConfiguration", "s3:PutLifecycleConfiguration"
     ]
     resources = ["*"]
   }

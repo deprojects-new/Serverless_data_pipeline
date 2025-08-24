@@ -33,5 +33,8 @@ module "s3" {
   #lambda_permission_id     = module.lambda.lambda_permission_id
 }
 
+# IAM OIDC resources are defined in iam_oidc.tf and will be created automatically
+# since they don't depend on the enable_ci_bootstrap flag anymore
+
 
 
