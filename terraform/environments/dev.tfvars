@@ -13,7 +13,7 @@ github_repo     = "Serverless_data_pipeline"
 
 
 # Data Lake Configuration
-data_lake_bucket_name = "sdp-dev-datalake"
+data_lake_bucket_name = "sdp-dev-datalake-082898"
 project               = "serverless-data-pipeline"
 environment           = "dev"
 

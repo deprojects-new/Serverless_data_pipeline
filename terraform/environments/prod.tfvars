@@ -4,7 +4,7 @@ aws_region = "us-east-2"
 
 # Your existing fields for your stack:
 # Data Lake Configuration
-data_lake_bucket_name = "sdp-prod-datalake"
+data_lake_bucket_name = "sdp-prod-datalake-082898"
 project               = "serverless-data-pipeline"
 environment           = "prod"
 
