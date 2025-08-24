@@ -119,7 +119,7 @@ data "aws_iam_policy_document" "tf_apply" {
   statement { # S3 control + data
     effect = "Allow"
     actions = [
-      "s3:CreateBucket", "s3:PutBucket*", "s3:DeleteBucket", "s3:GetBucket*", "s3:ListBucket",
+      "s3:GetAccelerateConfiguration","s3:CreateBucket", "s3:PutBucket*", "s3:DeleteBucket", "s3:GetBucket*", "s3:ListBucket",
       "s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucketMultipartUploads", "s3:AbortMultipartUpload"
     ]
     resources = ["*"]
