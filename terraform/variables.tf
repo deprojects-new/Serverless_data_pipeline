@@ -47,3 +47,12 @@ variable "users" {
   type        = list(string)
   default     = ["your-user1", "your-user2", "your-user3"]
 }
+
+
+
+# Add these if missing:
+variable "tf_state_bucket" { type = string } # e.g., "tfstate-872515279539"
+variable "tf_lock_table" { type = string }   # e.g., "tf-locks"
+variable "github_owner" { type = string }    # GitHub org/user
+variable "github_repo" { type = string }     # Repository name
+

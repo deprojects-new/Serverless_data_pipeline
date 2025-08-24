@@ -27,7 +27,6 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "data_lake_encrypt
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
     }
-    bucket_key_enabled = true
   }
 }
 
@@ -115,46 +114,47 @@ resource "aws_s3_bucket_lifecycle_configuration" "data_lake_lifecycle" {
 
 # Create folder structure
 resource "aws_s3_object" "bronze_folder" {
-  bucket = aws_s3_bucket.data_lake.id
-  key    = "bronze/"
-  source = "/dev/null"
+  bucket  = aws_s3_bucket.data_lake.id
+  key     = "bronze/"
+  content = ""
+
 }
 
 resource "aws_s3_object" "silver_folder" {
-  bucket = aws_s3_bucket.data_lake.id
-  key    = "silver/"
-  source = "/dev/null"
+  bucket  = aws_s3_bucket.data_lake.id
+  key     = "silver/"
+  content = ""
 }
 
 resource "aws_s3_object" "gold_folder" {
-  bucket = aws_s3_bucket.data_lake.id
-  key    = "gold/"
-  source = "/dev/null"
+  bucket  = aws_s3_bucket.data_lake.id
+  key     = "gold/"
+  content = ""
 }
 
 resource "aws_s3_object" "glue_scripts_folder" {
-  bucket = aws_s3_bucket.data_lake.id
-  key    = "glue_scripts/"
-  source = "/dev/null"
+  bucket  = aws_s3_bucket.data_lake.id
+  key     = "glue_scripts/"
+  content = ""
 }
 
 resource "aws_s3_object" "logs_folder" {
-  bucket = aws_s3_bucket.data_lake.id
-  key    = "logs/"
-  source = "/dev/null"
+  bucket  = aws_s3_bucket.data_lake.id
+  key     = "logs/"
+  content = ""
 }
 
 
 resource "aws_s3_object" "athena_results_folder" {
-  bucket = aws_s3_bucket.data_lake.id
-  key    = "athena-results/"
-  source = "/dev/null"
+  bucket  = aws_s3_bucket.data_lake.id
+  key     = "athena-results/"
+  content = ""
 }
 
 # S3 notifications - triggering on bronze
 resource "aws_s3_bucket_notification" "medallion_notification" {
-  bucket     = aws_s3_bucket.data_lake.id
-  depends_on = [var.lambda_permission_id]
+  count  = var.enable_notifications && var.lambda_function_arn != "" ? 1 : 0
+  bucket = aws_s3_bucket.data_lake.id
 
   lambda_function {
     lambda_function_arn = var.lambda_function_arn
