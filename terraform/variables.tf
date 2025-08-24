@@ -56,3 +56,30 @@ variable "tf_lock_table" { type = string }   # e.g., "tf-locks"
 variable "github_owner" { type = string }    # GitHub org/user
 variable "github_repo" { type = string }     # Repository name
 
+variable "enable_s3" {
+  type    = bool
+  default = true
+}
+
+variable "enable_lambda" {
+  type    = bool
+  default = false
+}
+
+variable "enable_glue" {
+  type    = bool
+  default = false
+}
+
+variable "enable_iam" {
+  type    = bool
+  default = false
+}
+
+variable "enable_sfn" {
+  type    = bool
+  default = false
+}
+
+
+
