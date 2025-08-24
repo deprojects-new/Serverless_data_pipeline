@@ -69,10 +69,7 @@ output "lambda_log_group_name" {
   value       = module.lambda.lambda_log_group_name
 }
 
-output "default_lambda_log_group_name" {
-  description = "Name of the default Lambda log group (data source)"
-  value       = module.lambda.default_lambda_log_group_name
-}
+
 
 output "step_functions_log_group_name" {
   description = "Name of the Step Functions log group"

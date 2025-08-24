@@ -25,12 +25,22 @@ variable "project" {
   type        = string
 }
 
+
+
 variable "lambda_function_arn" {
-  description = "ARN of the Lambda function to trigger"
+  description = "ARN of the Lambda function to trigger (required if notifications enabled)"
   type        = string
+  default     = ""
 }
 
 variable "lambda_permission_id" {
   description = "ID of the Lambda permission resource (for dependency)"
   type        = string
+  default     = ""
+}
+
+variable "enable_notifications" {
+  description = "Create S3 -> Lambda event notification"
+  type        = bool
+  default     = false
 }
