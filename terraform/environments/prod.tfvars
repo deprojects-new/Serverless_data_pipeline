@@ -13,3 +13,8 @@ tf_state_bucket = "tfstate-872515279539"
 tf_lock_table   = "tf-locks"
 github_owner    = "deprojects-new"
 github_repo     = "Serverless_data_pipeline"
+
+enable_lambda = false
+enable_glue   = false
+enable_iam    = false
+enable_sfn    = false
