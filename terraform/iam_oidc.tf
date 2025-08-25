@@ -104,16 +104,18 @@ data "aws_iam_policy_document" "tf_backend" {
 }
 
 resource "aws_iam_policy" "tf_backend" {
+  count  = var.enable_ci_bootstrap ? 1 : 0
   name   = "tf-backend-access"
   policy = data.aws_iam_policy_document.tf_backend.json
 }
 
 # --- Plan role (read-only + backend) ---
 resource "aws_iam_role" "gha_terraform_plan" {
+  count              = var.enable_ci_bootstrap ? 1 : 0
   name               = "gha-terraform-plan"
   assume_role_policy = data.aws_iam_policy_document.assume_plan.json
   managed_policy_arns = [
-    aws_iam_policy.tf_backend.arn,
+    aws_iam_policy.tf_backend[count.index].arn,
     "arn:aws:iam::aws:policy/ReadOnlyAccess"
   ]
 }
@@ -121,18 +123,27 @@ resource "aws_iam_role" "gha_terraform_plan" {
 # --- Apply role (backend + deploy perms for your stack) ---
 # NOTE: We restrict IAM writes/pass-role to roles prefixed "serverless-data-pipeline-"
 data "aws_iam_policy_document" "tf_apply" {
-  statement { # S3 control + data
+  statement { # S3 control + data (incl. object tagging)
     effect = "Allow"
     actions = [
       "s3:GetAccelerateConfiguration", "s3:CreateBucket", "s3:PutBucket*", "s3:DeleteBucket", "s3:GetBucket*", "s3:ListBucket",
       "s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucketMultipartUploads", "s3:AbortMultipartUpload",
-      "s3:GetLifecycleConfiguration", "s3:PutLifecycleConfiguration"
+      "s3:GetLifecycleConfiguration", "s3:PutLifecycleConfiguration",
+      "s3:PutObjectTagging", "s3:GetObjectTagging", "s3:DeleteObjectTagging"
     ]
     resources = ["*"]
   }
   statement { # Glue
     effect    = "Allow"
-    actions   = ["glue:*Database*", "glue:*Table*", "glue:*Crawler*", "glue:*Job*", "glue:Get*", "glue:Create*", "glue:Update*", "glue:Delete*"]
+    actions   = ["glue:*Database*", "glue:*Table*", "glue:*Crawler*", "glue:*Job*", "glue:Get*", "glue:Create*", "glue:Update*", "glue:Delete*", "glue:TagResource", "glue:UntagResource"]
+    resources = ["*"]
+  }
+  statement { # IAM tagging for provider/policies required by Terraform
+    effect = "Allow"
+    actions = [
+      "iam:TagOpenIDConnectProvider",
+      "iam:TagPolicy"
+    ]
     resources = ["*"]
   }
   statement { # Lambda
@@ -176,19 +187,21 @@ data "aws_iam_policy_document" "tf_apply" {
 }
 
 resource "aws_iam_policy" "tf_apply" {
+  count  = var.enable_ci_bootstrap ? 1 : 0
   name   = "tf-apply-deploy"
   policy = data.aws_iam_policy_document.tf_apply.json
 }
 
 resource "aws_iam_role" "gha_terraform_apply" {
+  count              = var.enable_ci_bootstrap ? 1 : 0
   name               = "gha-terraform-apply"
   assume_role_policy = data.aws_iam_policy_document.assume_apply.json
   managed_policy_arns = [
-    aws_iam_policy.tf_backend.arn,
-    aws_iam_policy.tf_apply.arn
+    aws_iam_policy.tf_backend[count.index].arn,
+    aws_iam_policy.tf_apply[count.index].arn
   ]
 }
 
 # --- Outputs helpful for wiring the workflow ---
-output "gha_plan_role_arn" { value = aws_iam_role.gha_terraform_plan.arn }
-output "gha_apply_role_arn" { value = aws_iam_role.gha_terraform_apply.arn }
+output "gha_plan_role_arn" { value = try(aws_iam_role.gha_terraform_plan[0].arn, null) }
+output "gha_apply_role_arn" { value = try(aws_iam_role.gha_terraform_apply[0].arn, null) }

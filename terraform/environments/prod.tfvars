@@ -36,4 +36,4 @@ enable_lambda = false
 enable_iam    = false
 enable_sfn    = false
 
-enable_ci_bootstrap = false
+enable_ci_bootstrap = true
