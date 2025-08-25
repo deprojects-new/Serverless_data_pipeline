@@ -6,7 +6,7 @@ resource "aws_iam_openid_connect_provider" "github" {
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
   thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
-  
+
   lifecycle {
     ignore_changes = [tags, tags_all]
   }
@@ -86,7 +86,7 @@ data "aws_iam_policy_document" "tf_backend" {
       "arn:aws:s3:::${var.tf_state_bucket}/*"
     ]
   }
-  
+
   statement {
     sid     = "DDBLock"
     effect  = "Allow"
@@ -101,7 +101,7 @@ resource "aws_iam_policy" "tf_backend" {
   count  = var.enable_ci_bootstrap ? 1 : 0
   name   = "tf-backend-access"
   policy = data.aws_iam_policy_document.tf_backend.json
-  
+
   lifecycle {
     ignore_changes = [tags, tags_all]
   }
@@ -112,7 +112,7 @@ resource "aws_iam_role" "gha_terraform_plan" {
   count              = var.enable_ci_bootstrap ? 1 : 0
   name               = "gha-terraform-plan"
   assume_role_policy = data.aws_iam_policy_document.assume_plan.json
-  
+
   lifecycle {
     ignore_changes = [tags, tags_all]
   }
@@ -130,17 +130,17 @@ data "aws_iam_policy_document" "tf_apply" {
     ]
     resources = ["*"]
   }
-  
+
   statement { # Glue (including tagging)
-    effect    = "Allow"
-    actions   = [
-      "glue:*Database*", "glue:*Table*", "glue:*Crawler*", "glue:*Job*", 
-      "glue:Get*", "glue:Create*", "glue:Update*", "glue:Delete*", 
+    effect = "Allow"
+    actions = [
+      "glue:*Database*", "glue:*Table*", "glue:*Crawler*", "glue:*Job*",
+      "glue:Get*", "glue:Create*", "glue:Update*", "glue:Delete*",
       "glue:TagResource", "glue:UntagResource"
     ]
     resources = ["*"]
   }
-  
+
   statement { # IAM management (including CI/CD infrastructure)
     effect = "Allow"
     actions = [
@@ -151,50 +151,50 @@ data "aws_iam_policy_document" "tf_apply" {
     ]
     resources = ["*"]
   }
-  
+
   statement { # Lambda
-    effect    = "Allow"
-    actions   = [
-      "lambda:*Function*", "lambda:CreateFunction", "lambda:UpdateFunction*", 
-      "lambda:DeleteFunction", "lambda:Get*", "lambda:AddPermission", 
+    effect = "Allow"
+    actions = [
+      "lambda:*Function*", "lambda:CreateFunction", "lambda:UpdateFunction*",
+      "lambda:DeleteFunction", "lambda:Get*", "lambda:AddPermission",
       "lambda:RemovePermission", "lambda:TagResource", "lambda:UntagResource"
     ]
     resources = ["*"]
   }
-  
+
   statement { # Step Functions
-    effect    = "Allow"
-    actions   = [
-      "states:CreateStateMachine", "states:UpdateStateMachine", "states:DeleteStateMachine", 
+    effect = "Allow"
+    actions = [
+      "states:CreateStateMachine", "states:UpdateStateMachine", "states:DeleteStateMachine",
       "states:TagResource", "states:UntagResource", "states:List*", "states:Describe*"
     ]
     resources = ["*"]
   }
-  
+
   statement { # CloudWatch Logs/Alarms/Events
     effect = "Allow"
     actions = [
-      "logs:*LogGroup*", "logs:*LogStream*", "logs:PutRetentionPolicy", 
-      "logs:PutSubscriptionFilter", "logs:DeleteSubscriptionFilter", 
-      "logs:CreateLogDelivery", "logs:DeleteLogDelivery", "logs:Describe*", 
+      "logs:*LogGroup*", "logs:*LogStream*", "logs:PutRetentionPolicy",
+      "logs:PutSubscriptionFilter", "logs:DeleteSubscriptionFilter",
+      "logs:CreateLogDelivery", "logs:DeleteLogDelivery", "logs:Describe*",
       "logs:List*", "logs:PutLogEvents",
       "cloudwatch:PutMetricAlarm", "cloudwatch:DeleteAlarms", "cloudwatch:DescribeAlarms",
-      "events:PutRule", "events:DeleteRule", "events:PutTargets", 
+      "events:PutRule", "events:DeleteRule", "events:PutTargets",
       "events:RemoveTargets", "events:DescribeRule", "events:List*"
     ]
     resources = ["*"]
   }
-  
+
   statement { # SNS for Glue alerts
     effect = "Allow"
     actions = [
-      "sns:CreateTopic", "sns:DeleteTopic", "sns:GetTopicAttributes", 
-      "sns:SetTopicAttributes", "sns:Subscribe", "sns:Unsubscribe", 
+      "sns:CreateTopic", "sns:DeleteTopic", "sns:GetTopicAttributes",
+      "sns:SetTopicAttributes", "sns:Subscribe", "sns:Unsubscribe",
       "sns:TagResource", "sns:UntagResource"
     ]
     resources = ["*"]
   }
-  
+
   statement { # KMS for encryption
     effect = "Allow"
     actions = [
@@ -207,7 +207,7 @@ data "aws_iam_policy_document" "tf_apply" {
       values   = ["glue.amazonaws.com", "s3.amazonaws.com"]
     }
   }
-  
+
   statement { # Create/attach on our own execution roles only (prefix-guarded)
     effect = "Allow"
     actions = [
@@ -217,13 +217,13 @@ data "aws_iam_policy_document" "tf_apply" {
     ]
     resources = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/serverless-data-pipeline-*"]
   }
-  
+
   statement { # PassRole to services (prefix-guarded)
     effect    = "Allow"
     actions   = ["iam:PassRole"]
     resources = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/serverless-data-pipeline-*"]
   }
-  
+
   statement { # Read-only IAM for lookups
     effect    = "Allow"
     actions   = ["iam:Get*", "iam:List*"]
@@ -235,7 +235,7 @@ resource "aws_iam_policy" "tf_apply" {
   count  = var.enable_ci_bootstrap ? 1 : 0
   name   = "tf-apply-deploy"
   policy = data.aws_iam_policy_document.tf_apply.json
-  
+
   lifecycle {
     ignore_changes = [tags, tags_all]
   }
@@ -246,7 +246,7 @@ resource "aws_iam_role" "gha_terraform_apply" {
   count              = var.enable_ci_bootstrap ? 1 : 0
   name               = "gha-terraform-apply"
   assume_role_policy = data.aws_iam_policy_document.assume_apply.json
-  
+
   lifecycle {
     ignore_changes = [tags, tags_all]
   }
@@ -278,10 +278,10 @@ resource "aws_iam_role_policy_attachment" "apply_deploy_policy" {
 }
 
 # Outputs for workflow integration
-output "gha_plan_role_arn" { 
-  value = try(aws_iam_role.gha_terraform_plan[0].arn, null) 
+output "gha_plan_role_arn" {
+  value = try(aws_iam_role.gha_terraform_plan[0].arn, null)
 }
 
-output "gha_apply_role_arn" { 
-  value = try(aws_iam_role.gha_terraform_apply[0].arn, null) 
+output "gha_apply_role_arn" {
+  value = try(aws_iam_role.gha_terraform_apply[0].arn, null)
 }
