@@ -7,6 +7,9 @@ resource "aws_iam_openid_connect_provider" "github" {
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
   thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
+  lifecycle {
+    ignore_changes = [tags, tags_all]
+  }
 }
 
 locals {
@@ -107,6 +110,9 @@ resource "aws_iam_policy" "tf_backend" {
   count  = var.enable_ci_bootstrap ? 1 : 0
   name   = "tf-backend-access"
   policy = data.aws_iam_policy_document.tf_backend.json
+  lifecycle {
+    ignore_changes = [tags, tags_all]
+  }
 }
 
 # --- Plan role (read-only + backend) ---
@@ -190,6 +196,9 @@ resource "aws_iam_policy" "tf_apply" {
   count  = var.enable_ci_bootstrap ? 1 : 0
   name   = "tf-apply-deploy"
   policy = data.aws_iam_policy_document.tf_apply.json
+  lifecycle {
+    ignore_changes = [tags, tags_all]
+  }
 }
 
 resource "aws_iam_role" "gha_terraform_apply" {
