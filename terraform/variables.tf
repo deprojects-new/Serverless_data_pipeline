@@ -44,11 +44,6 @@ variable "project" {
 
 
 
-variable "glue_role_arn" {
-  description = "ARN of the Glue execution role"
-  type        = string
-}
-
 variable "database_name" {
   description = "Logical suffix for Glue database (e.g., analytics)"
   type        = string
