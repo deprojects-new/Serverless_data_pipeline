@@ -1,16 +1,18 @@
 # Glue Database
 resource "aws_glue_catalog_database" "data_database" {
-  name = "${var.project}-${var.database_name}"
+  name = "${var.db_prefix}-${var.environment}-${var.database_name}"
 
   tags = {
-    Name        = var.database_name
+    Name        = "${var.db_prefix}-${var.environment}-${var.database_name}"
     Environment = var.environment
     Project     = var.project
+    ManagedBy   = "Terraform"
   }
 }
 
 resource "aws_glue_crawler" "silver_crawler" {
-  name          = "${var.project}-silver-crawler"
+  count         = var.enable_crawler ? 1 : 0
+  name          = "${var.project}-${var.environment}-silver-crawler"
   database_name = aws_glue_catalog_database.data_database.name
   role          = var.glue_role_arn
 
@@ -18,52 +20,48 @@ resource "aws_glue_crawler" "silver_crawler" {
     path = "s3://${var.data_lake_bucket_name}/silver/"
   }
 
-  # Configure for Parquet data
   schema_change_policy {
     update_behavior = "UPDATE_IN_DATABASE"
     delete_behavior = "DEPRECATE_IN_DATABASE"
   }
 
-  # prefix for silver layer
   table_prefix = "silver_"
 
-  # Recrawl policy - run when new data is detected
   recrawl_policy {
     recrawl_behavior = "CRAWL_EVERYTHING"
   }
 
-  # Configuration for better performance
   configuration = jsonencode({
-    "Version" = 1.0
-    "CrawlerOutput" = {
-      "Partitions" = {
-        "AddOrUpdateBehavior" = "InheritFromTable"
-      }
-      "Tables" = {
-        "AddOrUpdateBehavior" = "MergeNewColumns"
-      }
+    Version = 1.0
+    CrawlerOutput = {
+      Partitions = { AddOrUpdateBehavior = "InheritFromTable" }
+      Tables     = { AddOrUpdateBehavior = "MergeNewColumns" }
     }
   })
 
-  # Schedule - to keep the metadata updated
-  schedule = "cron(0 */4 * * ? *)"
+  schedule = var.crawler_schedule_cron
 
   tags = {
-    Name  = "${var.project}-silver-crawler"
-    Layer = "medallion-silver"
+    Name        = "${var.project}-${var.environment}-silver-crawler"
+    Environment = var.environment
+    Project     = var.project
+    Layer       = "medallion-silver"
+    ManagedBy   = "Terraform"
   }
 }
 
 
 # CloudWatch Log Groups
 resource "aws_cloudwatch_log_group" "silver_crawler_log_group" {
-  name              = "/aws-glue/crawlers/assignment5-silver-crawler"
-  retention_in_days = 0
+  count             = var.enable_crawler ? 1 : 0
+  name              = "/aws-glue/crawlers/${var.project}-${var.environment}-silver-crawler"
+  retention_in_days = var.log_retention_days
 
   tags = {
-    Name        = "${var.project}-silver-crawler-logs"
+    Name        = "${var.project}-${var.environment}-silver-crawler-logs"
     Environment = var.environment
     Project     = var.project
+    ManagedBy   = "Terraform"
   }
 }
 
@@ -83,22 +81,20 @@ resource "aws_glue_job" "bronze_to_silver_job" {
     "--project"                          = var.project
     "--bucket"                           = var.data_lake_bucket_name
     "--database"                         = aws_glue_catalog_database.data_database.name
-    "--continuous-log-logGroup"          = aws_cloudwatch_log_group.bronze_silver_log_group.name
     "--enable-continuous-cloudwatch-log" = "true"
     "--enable-metrics"                   = "true"
     "--enable-spark-ui"                  = "true"
     "--enable-job-insights"              = "true"
-    "--enable-spark-ui"                  = "true"
-    "--enable-metrics"                   = "true"
-    "--enable-continuous-cloudwatch-log" = "true"
     "--enable-continuous-log-filter"     = "true"
     "--continuous-log-logGroup"          = aws_cloudwatch_log_group.bronze_silver_log_group.name
     "--continuous-log-logStreamPrefix"   = "bronze-silver-"
   }
 
-  glue_version = "4.0"
-  max_retries  = 1
-  timeout      = 30 # 30 minutes max
+  glue_version      = var.glue_version
+  number_of_workers = var.number_of_workers
+  worker_type       = var.worker_type
+  max_retries       = 1
+  timeout           = 30
 
 
 
@@ -125,23 +121,20 @@ resource "aws_glue_job" "silver_to_gold_job" {
     "--project"                          = var.project
     "--bucket"                           = var.data_lake_bucket_name
     "--database"                         = aws_glue_catalog_database.data_database.name
-    "--continuous-log-logGroup"          = aws_cloudwatch_log_group.silver_gold_log_group.name
     "--enable-continuous-cloudwatch-log" = "true"
     "--enable-metrics"                   = "true"
     "--enable-spark-ui"                  = "true"
     "--enable-job-insights"              = "true"
-    "--enable-spark-ui"                  = "true"
-    "--enable-metrics"                   = "true"
-    "--enable-continuous-cloudwatch-log" = "true"
     "--enable-continuous-log-filter"     = "true"
     "--continuous-log-logGroup"          = aws_cloudwatch_log_group.silver_gold_log_group.name
     "--continuous-log-logStreamPrefix"   = "silver-gold-"
   }
 
-  glue_version = "4.0"
-  max_retries  = 1
-  timeout      = 30
-
+  glue_version      = var.glue_version
+  number_of_workers = var.number_of_workers
+  worker_type       = var.worker_type
+  max_retries       = 1
+  timeout           = 30
 
   tags = {
     Name  = "${var.project}-silver-to-gold"
@@ -153,10 +146,11 @@ resource "aws_glue_job" "silver_to_gold_job" {
 
 # Upload Bronze→Silver script
 resource "aws_s3_object" "bronze_to_silver_script" {
+  count  = var.upload_scripts ? 1 : 0
   bucket = var.data_lake_bucket_name
   key    = "glue_scripts/bronze_silver.py"
-  source = "${path.root}/../src/glue_scripts/bronze_silver.py"
-  etag   = filemd5("${path.root}/../src/glue_scripts/bronze_silver.py")
+  source = "${path.root}/${var.local_glue_scripts_root}/bronze_silver.py"
+  etag   = filemd5("${path.root}/${var.local_glue_scripts_root}/bronze_silver.py")
 
   tags = {
     Name  = "bronze-to-silver-script"
@@ -166,10 +160,11 @@ resource "aws_s3_object" "bronze_to_silver_script" {
 
 # Upload Silver→Gold script
 resource "aws_s3_object" "silver_to_gold_script" {
+  count  = var.upload_scripts ? 1 : 0
   bucket = var.data_lake_bucket_name
   key    = "glue_scripts/silver_gold.py"
-  source = "${path.root}/../src/glue_scripts/silver_gold.py"
-  etag   = filemd5("${path.root}/../src/glue_scripts/silver_gold.py")
+  source = "${path.root}/${var.local_glue_scripts_root}/silver_gold.py"
+  etag   = filemd5("${path.root}/${var.local_glue_scripts_root}/silver_gold.py")
 
   tags = {
     Name  = "silver-to-gold-script"
@@ -179,48 +174,44 @@ resource "aws_s3_object" "silver_to_gold_script" {
 
 # Professional Glue Job Log Groups
 resource "aws_cloudwatch_log_group" "bronze_silver_log_group" {
-  name              = "/aws-glue/jobs/assignment5-bronze-silver"
-  retention_in_days = 0 # Never expire - matches AWS Glue default behavior
+  name              = "/aws-glue/jobs/${var.project}-${var.environment}-bronze-silver"
+  retention_in_days = var.log_retention_days
 
   tags = {
-    Name        = "assignment5-bronze-silver-logs"
+    Name        = "${var.project}-${var.environment}-bronze-silver-logs"
     Environment = var.environment
     Project     = var.project
-    Purpose     = "bronze-to-silver-etl-logs"
-    ManagedBy   = "terraform"
+    ManagedBy   = "Terraform"
   }
 }
+
 
 resource "aws_cloudwatch_log_group" "silver_gold_log_group" {
-  name              = "/aws-glue/jobs/assignment5-silver-gold"
-  retention_in_days = 0
+  name              = "/aws-glue/jobs/${var.project}-${var.environment}-silver-gold"
+  retention_in_days = var.log_retention_days
+
   tags = {
-    Name        = "assignment5-silver-gold-logs"
+    Name        = "${var.project}-${var.environment}-silver-gold-logs"
     Environment = var.environment
     Project     = var.project
-    Purpose     = "silver-to-gold-etl-logs"
-    ManagedBy   = "terraform"
+    ManagedBy   = "Terraform"
   }
 }
-
-# CloudWatch Alarms for Glue Jobs and Crawler
-
-
-
 
 
 
 # Data Quality Alarms
 resource "aws_cloudwatch_metric_alarm" "data_quality_bronze_silver" {
-  alarm_name          = "${var.project}-data-quality-bronze-silver"
+  count               = var.enable_alarms ? 1 : 0
+  alarm_name          = "${var.project}-${var.environment}-data-quality-bronze-silver"
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = 2
   metric_name         = "glue.driver.aggregate.recordsRead"
   namespace           = "AWS/Glue"
   period              = 300
   statistic           = "Sum"
-  threshold           = 100 # Alert if less than 100 records processed
-  alarm_description   = "Alarm when Bronze to Silver job processes very few records (potential data issue)"
+  threshold           = var.dq_threshold_bronze_silver
+  alarm_description   = "Low records processed by Bronze->Silver job"
   alarm_actions       = []
 
   dimensions = {
@@ -229,7 +220,7 @@ resource "aws_cloudwatch_metric_alarm" "data_quality_bronze_silver" {
   }
 
   tags = {
-    Name        = "${var.project}-data-quality-bronze-silver-alarm"
+    Name        = "${var.project}-${var.environment}-data-quality-bronze-silver"
     Environment = var.environment
     Project     = var.project
     Layer       = "medallion-data-quality"
@@ -237,15 +228,16 @@ resource "aws_cloudwatch_metric_alarm" "data_quality_bronze_silver" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "data_quality_silver_gold" {
-  alarm_name          = "${var.project}-data-quality-silver-gold"
+  count               = var.enable_alarms ? 1 : 0
+  alarm_name          = "${var.project}-${var.environment}-data-quality-silver-gold"
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = 2
   metric_name         = "glue.driver.aggregate.recordsRead"
   namespace           = "AWS/Glue"
   period              = 300
   statistic           = "Sum"
-  threshold           = 50 # Alert if less than 50 records processed
-  alarm_description   = "Alarm when Silver to Gold job processes very few records (potential data issue)"
+  threshold           = var.dq_threshold_silver_gold
+  alarm_description   = "Low records processed by Silver->Gold job"
   alarm_actions       = []
 
   dimensions = {
@@ -254,7 +246,7 @@ resource "aws_cloudwatch_metric_alarm" "data_quality_silver_gold" {
   }
 
   tags = {
-    Name        = "${var.project}-data-quality-silver-gold-alarm"
+    Name        = "${var.project}-${var.environment}-data-quality-silver-gold"
     Environment = var.environment
     Project     = var.project
     Layer       = "medallion-data-quality"

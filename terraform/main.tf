@@ -33,8 +33,37 @@ module "s3" {
   #lambda_permission_id     = module.lambda.lambda_permission_id
 }
 
-# IAM OIDC resources are defined in iam_oidc.tf and will be created automatically
-# since they don't depend on the enable_ci_bootstrap flag anymore
+module "glue" {
+  source = "./modules/glue"
+
+  data_lake_bucket_name = var.data_lake_bucket_name
+  glue_role_arn         = module.iam.glue_execution_role_arn
+  environment           = var.environment
+  project               = var.project
+  database_name         = var.database_name
+  db_prefix             = var.db_prefix
+
+  enable_crawler        = var.enable_crawler
+  crawler_schedule_cron = var.crawler_schedule_cron
+  log_retention_days    = var.log_retention_days
+
+  glue_version      = var.glue_version
+  worker_type       = var.worker_type
+  number_of_workers = var.number_of_workers
+
+  dq_threshold_bronze_silver = var.dq_threshold_bronze_silver
+  dq_threshold_silver_gold   = var.dq_threshold_silver_gold
+  enable_alarms              = var.enable_alarms
+
+  upload_scripts          = var.upload_scripts
+  local_glue_scripts_root = var.local_glue_scripts_root
+}
 
 
-
+module "iam" {
+  source                = "./modules/iam"
+  environment           = var.environment
+  project               = var.project
+  users                 = []
+  data_lake_bucket_name = var.data_lake_bucket_name
+}

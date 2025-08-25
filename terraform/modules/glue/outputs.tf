@@ -22,13 +22,14 @@ output "silver_to_gold_job_arn" {
 
 output "silver_crawler_name" {
   description = "Name of the Silver layer Glue crawler"
-  value       = aws_glue_crawler.silver_crawler.name
+  value       = try(aws_glue_crawler.silver_crawler[0].name, null)
 }
 
 output "silver_crawler_arn" {
   description = "ARN of the Silver layer Glue crawler"
-  value       = aws_glue_crawler.silver_crawler.arn
+  value       = try(aws_glue_crawler.silver_crawler[0].arn, null)
 }
+
 
 output "database_name" {
   description = "Name of the Glue database"
@@ -46,25 +47,18 @@ output "bronze_silver_log_group_name" {
   value       = aws_cloudwatch_log_group.bronze_silver_log_group.name
 }
 
-output "silver_gold_log_group_name" {
-  description = "Name of the Silver-Gold ETL log group"
-  value       = aws_cloudwatch_log_group.silver_gold_log_group.name
-}
-
 output "silver_crawler_log_group_name" {
   description = "Name of the Silver Crawler log group"
-  value       = aws_cloudwatch_log_group.silver_crawler_log_group.name
+  value       = try(aws_cloudwatch_log_group.silver_crawler_log_group[0].name, null)
 }
-
-
 
 
 output "data_quality_bronze_silver_alarm_arn" {
   description = "ARN of the Bronze to Silver data quality alarm"
-  value       = aws_cloudwatch_metric_alarm.data_quality_bronze_silver.arn
+  value       = try(aws_cloudwatch_metric_alarm.data_quality_bronze_silver[0].arn, null)
 }
 
 output "data_quality_silver_gold_alarm_arn" {
   description = "ARN of the Silver to Gold data quality alarm"
-  value       = aws_cloudwatch_metric_alarm.data_quality_silver_gold.arn
+  value       = try(aws_cloudwatch_metric_alarm.data_quality_silver_gold[0].arn, null)
 }
