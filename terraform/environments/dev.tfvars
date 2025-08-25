@@ -19,10 +19,18 @@ environment           = "dev"
 
 # Lifecycle Configuration
 data_lake_versioning     = true
-data_lake_lifecycle_days = 90  # Shorter retention for dev environment
+data_lake_lifecycle_days = 90 # Shorter retention for dev environment
+
+
+database_name      = "analytics"
+db_prefix          = "082898"
+enable_crawler     = true
+log_retention_days = 30
+
+dq_threshold_bronze_silver = 50
+dq_threshold_silver_gold   = 25
 
 enable_lambda = false
-enable_glue   = false
 enable_iam    = false
 enable_sfn    = false
 
