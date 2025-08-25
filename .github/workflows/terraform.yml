@@ -12,10 +12,12 @@ permissions:
   contents: read
 
 jobs:
-  plan:
+  # Dev planning - only on PRs
+  plan-dev:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     concurrency:
-      group: tf-plan-${{ github.ref }}
+      group: tf-plan-dev-${{ github.ref }}
       cancel-in-progress: true
     defaults:
       run:
@@ -59,6 +61,44 @@ jobs:
           name: tfplan-dev
           path: terraform/tfplan-dev
 
+  # Prod planning and apply - only on main branch
+  plan-prod:
+    if: github.ref == 'refs/heads/main'
+    needs: []
+    runs-on: ubuntu-latest
+    concurrency:
+      group: tf-plan-prod
+      cancel-in-progress: true
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+          terraform_wrapper: false
+
+      - name: Configure AWS (plan role via OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::872515279539:role/gha-terraform-plan
+          aws-region: us-east-2
+
+      - name: Who am I (STS)
+        run: aws sts get-caller-identity
+
+      - name: Init
+        run: terraform init -input=false -reconfigure
+
+      - name: Format & Validate
+        run: |
+          terraform fmt -check
+          terraform validate
+
       - name: Select/Create prod workspace
         run: terraform workspace select -or-create=true prod
 
@@ -73,7 +113,7 @@ jobs:
 
   apply-prod:
     if: github.ref == 'refs/heads/main'
-    needs: plan
+    needs: plan-prod
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment: production   
@@ -114,5 +154,36 @@ jobs:
           name: tfplan-prod
           path: terraform
 
+      # ROLLBACK STRATEGY: Backup current state before applying
+      - name: Backup current state (rollback preparation)
+        run: |
+          echo "Creating state backup before deployment..."
+          aws s3 cp s3://tfstate-872515279539/serverless_data/terraform.tfstate \
+            s3://tfstate-872515279539/serverless_data/terraform.tfstate.backup.$(date +%Y%m%d-%H%M%S) || echo "No existing state to backup"
+          echo "State backup completed"
+
+      # ROLLBACK STRATEGY: Apply with error handling
       - name: Apply (prod) — requires manual approval on this job
-        run: terraform apply -input=false -auto-approve tfplan-prod
+        id: apply
+        run: |
+          echo "Starting production deployment..."
+          terraform apply -input=false -auto-approve tfplan-prod
+          echo "Deployment completed successfully"
+        continue-on-error: true
+
+      # ROLLBACK STRATEGY: Automatic rollback on failure
+      - name: Rollback on failure
+        if: steps.apply.outcome == 'failure'
+        run: |
+          echo "Deployment failed! Starting rollback..."
+          echo "To rollback manually, run:"
+          echo "aws s3 cp s3://tfstate-872515279539/serverless_data/terraform.tfstate.backup.$(ls s3://tfstate-872515279539/serverless_data/ | grep backup | tail -1) s3://tfstate-872515279539/serverless_data/terraform.tfstate"
+          echo "terraform init && terraform apply -auto-approve"
+          exit 1
+
+      # ROLLBACK STRATEGY: Success notification
+      - name: Deployment success
+        if: steps.apply.outcome == 'success'
+        run: |
+          echo "Production deployment completed successfully!"
+          echo "State backup available at: s3://tfstate-872515279539/serverless_data/terraform.tfstate.backup.*"

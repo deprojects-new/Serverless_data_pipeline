@@ -31,7 +31,6 @@ dq_threshold_bronze_silver = 50
 dq_threshold_silver_gold   = 25
 
 enable_lambda = false
-enable_iam    = false
 enable_sfn    = false
 
 enable_ci_bootstrap = false
