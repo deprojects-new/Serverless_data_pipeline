@@ -35,4 +35,4 @@ dq_threshold_silver_gold   = 50
 enable_lambda = false
 enable_sfn    = false
 
-enable_ci_bootstrap = true
+enable_ci_bootstrap = false
