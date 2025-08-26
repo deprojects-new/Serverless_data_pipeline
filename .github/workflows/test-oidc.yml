@@ -3,6 +3,10 @@ name: Test OIDC Connection
 on:
   workflow_dispatch:  # Manual trigger
 
+permissions:
+  id-token: write  # Required for OIDC authentication
+  contents: read   # Required for checkout
+
 jobs:
   test-oidc:
     runs-on: ubuntu-latest
