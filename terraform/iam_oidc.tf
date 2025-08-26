@@ -3,6 +3,7 @@
 data "aws_caller_identity" "current" {}
 
 resource "aws_iam_openid_connect_provider" "github" {
+  count           = var.enable_ci_bootstrap ? 1 : 0
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
   thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
@@ -24,13 +25,14 @@ locals {
 
 # Plan role trust policy - allows any branch/PR
 data "aws_iam_policy_document" "assume_plan" {
+  count = var.enable_ci_bootstrap ? 1 : 0
   statement {
     effect  = "Allow"
     actions = ["sts:AssumeRoleWithWebIdentity"]
 
     principals {
       type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.github.arn]
+      identifiers = [aws_iam_openid_connect_provider.github[0].arn]
     }
 
     condition {
@@ -52,13 +54,14 @@ data "aws_iam_policy_document" "assume_plan" {
 
 # Apply role trust policy - only main branch or production environment
 data "aws_iam_policy_document" "assume_apply" {
+  count = var.enable_ci_bootstrap ? 1 : 0
   statement {
     effect  = "Allow"
     actions = ["sts:AssumeRoleWithWebIdentity"]
 
     principals {
       type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.github.arn]
+      identifiers = [aws_iam_openid_connect_provider.github[0].arn]
     }
 
     condition {
@@ -111,7 +114,7 @@ resource "aws_iam_policy" "tf_backend" {
 resource "aws_iam_role" "gha_terraform_plan" {
   count              = var.enable_ci_bootstrap ? 1 : 0
   name               = "gha-terraform-plan"
-  assume_role_policy = data.aws_iam_policy_document.assume_plan.json
+  assume_role_policy = data.aws_iam_policy_document.assume_plan[count.index].json
 
   lifecycle {
     ignore_changes = [tags, tags_all]
@@ -126,6 +129,7 @@ data "aws_iam_policy_document" "tf_apply" {
       "s3:GetAccelerateConfiguration", "s3:CreateBucket", "s3:PutBucket*", "s3:DeleteBucket", "s3:GetBucket*", "s3:ListBucket",
       "s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucketMultipartUploads", "s3:AbortMultipartUpload",
       "s3:GetLifecycleConfiguration", "s3:PutLifecycleConfiguration",
+      "s3:GetReplicationConfiguration", "s3:PutReplicationConfiguration",
       "s3:PutObjectTagging", "s3:GetObjectTagging", "s3:DeleteObjectTagging"
     ]
     resources = ["*"]
@@ -179,6 +183,7 @@ data "aws_iam_policy_document" "tf_apply" {
       "logs:CreateLogDelivery", "logs:DeleteLogDelivery", "logs:Describe*",
       "logs:List*", "logs:PutLogEvents",
       "cloudwatch:PutMetricAlarm", "cloudwatch:DeleteAlarms", "cloudwatch:DescribeAlarms",
+      "cloudwatch:ListMetrics", "cloudwatch:GetMetricData", "cloudwatch:GetMetricStatistics",
       "events:PutRule", "events:DeleteRule", "events:PutTargets",
       "events:RemoveTargets", "events:DescribeRule", "events:List*"
     ]
@@ -190,7 +195,7 @@ data "aws_iam_policy_document" "tf_apply" {
     actions = [
       "sns:CreateTopic", "sns:DeleteTopic", "sns:GetTopicAttributes",
       "sns:SetTopicAttributes", "sns:Subscribe", "sns:Unsubscribe",
-      "sns:TagResource", "sns:UntagResource"
+      "sns:TagResource", "sns:UntagResource", "sns:ListTopics"
     ]
     resources = ["*"]
   }
@@ -245,7 +250,7 @@ resource "aws_iam_policy" "tf_apply" {
 resource "aws_iam_role" "gha_terraform_apply" {
   count              = var.enable_ci_bootstrap ? 1 : 0
   name               = "gha-terraform-apply"
-  assume_role_policy = data.aws_iam_policy_document.assume_apply.json
+  assume_role_policy = data.aws_iam_policy_document.assume_apply[count.index].json
 
   lifecycle {
     ignore_changes = [tags, tags_all]
@@ -279,9 +284,9 @@ resource "aws_iam_role_policy_attachment" "apply_deploy_policy" {
 
 # Outputs for workflow integration
 output "gha_plan_role_arn" {
-  value = try(aws_iam_role.gha_terraform_plan[0].arn, null)
+  value = var.enable_ci_bootstrap ? aws_iam_role.gha_terraform_plan[0].arn : null
 }
 
 output "gha_apply_role_arn" {
-  value = try(aws_iam_role.gha_terraform_apply[0].arn, null)
+  value = var.enable_ci_bootstrap ? aws_iam_role.gha_terraform_apply[0].arn : null
 }
