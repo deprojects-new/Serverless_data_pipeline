@@ -1,0 +1,58 @@
+name: Test Apply Role
+
+on:
+  workflow_dispatch:  # Manual trigger
+
+permissions:
+  id-token: write  # Required for OIDC authentication
+  contents: read   # Required for checkout
+
+jobs:
+  test-apply:
+    runs-on: ubuntu-latest
+    environment: production  # Required for apply role
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS (apply role)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::872515279539:role/gha-terraform-apply
+          aws-region: us-east-2
+
+      - name: Test AWS Identity
+        run: |
+          echo "Testing apply role..."
+          aws sts get-caller-identity
+          echo "Apply role connection successful!"
+
+      - name: Test IAM Permissions
+        run: |
+          echo "Testing IAM permissions..."
+          aws iam list-roles --max-items 5
+          echo "IAM permissions successful!"
+
+      - name: Test S3 Full Access
+        run: |
+          echo "Testing S3 full access..."
+          aws s3 ls s3://tfstate-872515279539/
+          echo "S3 full access successful!"
+
+      - name: Test Glue Permissions
+        run: |
+          echo "Testing Glue permissions..."
+          aws glue get-databases --max-items 5
+          echo "Glue permissions successful!"
+
+      - name: Test CloudWatch Permissions
+        run: |
+          echo "Testing CloudWatch permissions..."
+          aws cloudwatch list-metrics --namespace AWS/Glue --max-items 5
+          echo "CloudWatch permissions successful!"
+
+      - name: Test SNS Permissions
+        run: |
+          echo "Testing SNS permissions..."
+          aws sns list-topics --max-items 5
+          echo "SNS permissions successful!"
