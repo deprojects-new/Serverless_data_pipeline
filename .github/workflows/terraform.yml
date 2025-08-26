@@ -35,7 +35,7 @@ jobs:
       - name: Configure AWS (plan role via OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::872515279539:role/gha-terraform-plan
+          role-to-assume: ${{ vars.PLAN_ROLE_ARN }}
           aws-region: us-east-2
 
       - name: Who am I (STS)
@@ -85,7 +85,7 @@ jobs:
       - name: Configure AWS (plan role via OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::872515279539:role/gha-terraform-plan
+          role-to-assume: ${{ vars.PLAN_ROLE_ARN }}
           aws-region: us-east-2
 
       - name: Who am I (STS)
@@ -136,7 +136,7 @@ jobs:
       - name: Configure AWS (apply role via OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::872515279539:role/gha-terraform-apply
+          role-to-assume: ${{ vars.APPLY_ROLE_ARN }}
           aws-region: us-east-2
 
       - name: Who am I (STS)
