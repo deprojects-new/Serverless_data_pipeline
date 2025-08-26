@@ -11,6 +11,7 @@ provider "aws" {
   }
 }
 
+/*
 terraform {
   backend "s3" {
     bucket         = "tfstate-872515279539"
@@ -20,10 +21,10 @@ terraform {
     encrypt        = true
   }
 }
+*/
 
 module "s3" {
   source = "./modules/s3"
-
   data_lake_bucket_name    = var.data_lake_bucket_name
   data_lake_versioning     = var.data_lake_versioning
   data_lake_lifecycle_days = var.data_lake_lifecycle_days
