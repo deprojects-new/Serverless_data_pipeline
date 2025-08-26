@@ -1,0 +1,51 @@
+name: OIDC Smoke Tests
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  test-plan-role:
+    name: Plan role OIDC
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS (plan role)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.PLAN_ROLE_ARN }}
+          aws-region: us-east-2
+
+      - name: Who am I?
+        run: aws sts get-caller-identity
+
+      - name: Backend access sanity
+        run: |
+          aws s3 ls s3://tfstate-872515279539/ || true
+          aws dynamodb describe-table --table-name tf-locks --region us-east-2 || true
+
+  test-apply-role:
+    name: Apply role OIDC
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS (apply role)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.APPLY_ROLE_ARN }}
+          aws-region: us-east-2
+
+      - name: Who am I?
+        run: aws sts get-caller-identity
+
+      - name: Basic service access checks
+        run: |
+          aws s3 ls || true
+          aws iam get-role --role-name gha-terraform-plan || true
+          aws cloudwatch list-metrics --namespace AWS/Glue --max-items 5 || true
