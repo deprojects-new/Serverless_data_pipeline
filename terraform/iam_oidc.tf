@@ -123,14 +123,10 @@ resource "aws_iam_role" "gha_terraform_plan" {
 
 # Apply role (full deployment permissions)
 data "aws_iam_policy_document" "tf_apply" {
-  statement { # S3 control + data (including object tagging)
+  statement { # S3 full access for Terraform
     effect = "Allow"
     actions = [
-      "s3:GetAccelerateConfiguration", "s3:CreateBucket", "s3:PutBucket*", "s3:DeleteBucket", "s3:GetBucket*", "s3:ListBucket",
-      "s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucketMultipartUploads", "s3:AbortMultipartUpload",
-      "s3:GetLifecycleConfiguration", "s3:PutLifecycleConfiguration",
-      "s3:GetReplicationConfiguration", "s3:PutReplicationConfiguration",
-      "s3:PutObjectTagging", "s3:GetObjectTagging", "s3:DeleteObjectTagging"
+      "s3:*"
     ]
     resources = ["*"]
   }
