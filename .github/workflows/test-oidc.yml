@@ -1,0 +1,48 @@
+name: Test OIDC Connection
+
+on:
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  test-oidc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS (plan role)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::872515279539:role/gha-terraform-plan
+          aws-region: us-east-2
+
+      - name: Test AWS Identity
+        run: |
+          echo "Testing OIDC connection..."
+          aws sts get-caller-identity
+          echo "OIDC connection successful!"
+
+      - name: Test S3 Access (read-only)
+        run: |
+          echo "Testing S3 read access..."
+          aws s3 ls s3://tfstate-872515279539/
+          echo "S3 read access successful!"
+
+      - name: Test IAM Read Access
+        run: |
+          echo "Testing IAM read access..."
+          aws iam list-roles --max-items 5
+          echo "IAM read access successful!"
+
+      - name: Test OIDC Provider Access
+        run: |
+          echo "Testing OIDC provider access..."
+          aws iam get-open-id-connect-provider --open-id-connect-provider-arn arn:aws:iam::872515279539:oidc-provider/token.actions.githubusercontent.com
+          echo "OIDC provider access successful!"
+
+      - name: Test Role Access
+        run: |
+          echo "Testing role access..."
+          aws iam get-role --role-name gha-terraform-plan
+          aws iam get-role --role-name gha-terraform-apply
+          echo "Role access successful!"
