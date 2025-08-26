@@ -24,7 +24,7 @@ terraform {
 */
 
 module "s3" {
-  source = "./modules/s3"
+  source                   = "./modules/s3"
   data_lake_bucket_name    = var.data_lake_bucket_name
   data_lake_versioning     = var.data_lake_versioning
   data_lake_lifecycle_days = var.data_lake_lifecycle_days
